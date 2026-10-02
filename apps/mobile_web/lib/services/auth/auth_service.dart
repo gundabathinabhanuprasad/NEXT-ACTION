@@ -10,14 +10,18 @@ import '../../models/auth/auth_models.dart';
 class AuthService {
   final ApiClient _apiClient;
   final GoogleSignIn? _defaultGoogleSignIn;
+  late final GoogleSignIn _googleSignIn;
 
   AuthService({ApiClient? apiClient, GoogleSignIn? googleSignIn})
       : _apiClient = apiClient ?? ApiClient(),
-        _defaultGoogleSignIn = googleSignIn;
+        _defaultGoogleSignIn = googleSignIn {
+    _googleSignIn = googleSignIn ?? _createGoogleSignIn();
+  }
 
   ApiClient get apiClient => _apiClient;
   TokenStorage get tokenStorage => _apiClient.tokenStorage;
   RefreshTokenStorage? get refreshTokenStorage => _apiClient.refreshTokenStorage;
+  GoogleSignIn get googleSignIn => _googleSignIn;
 
   GoogleSignIn _createGoogleSignIn() {
     final webId = ApiConfig.googleWebClientId.isNotEmpty
@@ -29,7 +33,7 @@ class AuthService {
 
     return GoogleSignIn(
       clientId: kIsWeb ? webId : null,
-      serverClientId: serverId,
+      serverClientId: kIsWeb ? null : serverId,
       scopes: const ['email', 'openid', 'profile'],
     );
   }
@@ -55,17 +59,8 @@ class AuthService {
     return tokenResponse;
   }
 
-  /// Authenticate using Google credential (ID Token or Access Token) and persist returned NextAction JWT.
-  /// Returns null if user cancelled the sign-in flow.
-  Future<TokenResponse?> signInWithGoogle({GoogleSignIn? customGoogleSignIn}) async {
-    final googleSignIn = customGoogleSignIn ?? _defaultGoogleSignIn ?? _createGoogleSignIn();
-
-    final GoogleSignInAccount? account = await googleSignIn.signIn();
-    if (account == null) {
-      // User explicitly cancelled the sign-in flow
-      return null;
-    }
-
+  /// Authenticate using an existing GoogleSignInAccount (obtained from renderButton or onCurrentUserChanged).
+  Future<TokenResponse> authenticateWithGoogleAccount(GoogleSignInAccount account) async {
     final GoogleSignInAuthentication auth = await account.authentication;
     final String? token = (auth.idToken != null && auth.idToken!.isNotEmpty)
         ? auth.idToken
@@ -91,6 +86,20 @@ class AuthService {
       await _apiClient.refreshTokenStorage!.saveRefreshToken(tokenResponse.refreshToken!);
     }
     return tokenResponse;
+  }
+
+  /// Authenticate using Google credential (ID Token or Access Token) and persist returned NextAction JWT.
+  /// Returns null if user cancelled the sign-in flow.
+  Future<TokenResponse?> signInWithGoogle({GoogleSignIn? customGoogleSignIn}) async {
+    final googleSignIn = customGoogleSignIn ?? _defaultGoogleSignIn ?? _googleSignIn;
+
+    final GoogleSignInAccount? account = await googleSignIn.signIn();
+    if (account == null) {
+      // User explicitly cancelled the sign-in flow
+      return null;
+    }
+
+    return authenticateWithGoogleAccount(account);
   }
 
   /// Register a new user account.

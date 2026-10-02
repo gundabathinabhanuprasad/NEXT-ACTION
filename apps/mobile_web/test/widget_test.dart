@@ -116,7 +116,10 @@ class FakeGoogleSignIn implements GoogleSignIn {
   }
 
   @override
-  Future<GoogleSignInAccount?> disconnect() async => null;
+  Stream<GoogleSignInAccount?> get onCurrentUserChanged => const Stream.empty();
+
+  @override
+  Future<GoogleSignInAccount?> signInSilently({bool reAuthenticate = false, bool suppressErrors = true}) async => null;
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

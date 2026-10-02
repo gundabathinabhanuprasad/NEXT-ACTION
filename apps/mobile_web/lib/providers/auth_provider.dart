@@ -146,6 +146,36 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// Handle authenticated Google account (from GIS renderButton or onCurrentUserChanged).
+  Future<bool> handleGoogleAccount(GoogleSignInAccount account) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _authService.authenticateWithGoogleAccount(account);
+      final user = await _authService.getCurrentUser();
+      _currentUser = user;
+      _status = AuthStatus.authenticated;
+      _errorMessage = null;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _isLoading = false;
+      _status = AuthStatus.unauthenticated;
+      _errorMessage = e.message;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _isLoading = false;
+      _status = AuthStatus.unauthenticated;
+      _errorMessage = 'Google authentication failed: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Register a new user account.
   Future<User?> register(String name, String email, String password) async {
     _isLoading = true;

@@ -112,8 +112,11 @@ def verify_google_id_token(
         # Check if the token is an OAuth2 access token
         payload = _try_verify_access_token(token.strip(), allowed_audiences)
         if not payload:
-            logger.warning(f"Google ID token verification failed: {e}")
-            raise InvalidGoogleTokenError(f"Invalid Google ID token: {str(e)}") from e
+            logger.warning("Google ID token verification failed.")
+            err_msg = str(e)
+            if "token:" in err_msg:
+                err_msg = err_msg.split("token:")[0].strip()
+            raise InvalidGoogleTokenError(f"Invalid Google ID token: {err_msg}") from e
     except Exception as e:
         payload = _try_verify_access_token(token.strip(), allowed_audiences)
         if not payload:

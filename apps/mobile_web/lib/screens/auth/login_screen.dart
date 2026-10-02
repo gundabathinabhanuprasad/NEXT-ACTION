@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../../providers/auth_provider.dart';
+import '../../widgets/auth/google_sign_in_button.dart';
 import '../../widgets/common_widgets.dart';
 import 'register_screen.dart';
 
@@ -20,9 +24,31 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   String? _localError;
+  StreamSubscription<GoogleSignInAccount?>? _googleSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _googleSub = widget.authProvider.authService.googleSignIn.onCurrentUserChanged.listen(
+      (GoogleSignInAccount? account) async {
+        if (account != null && mounted) {
+          final success = await widget.authProvider.handleGoogleAccount(account);
+          if (!success && mounted && widget.authProvider.errorMessage != null) {
+            setState(() {
+              _localError = widget.authProvider.errorMessage;
+            });
+          }
+        }
+      },
+    );
+    if (kIsWeb) {
+      widget.authProvider.authService.googleSignIn.signInSilently();
+    }
+  }
 
   @override
   void dispose() {
+    _googleSub?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
@@ -221,6 +247,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     animation: widget.authProvider,
                     builder: (context, _) {
                       final isLoading = widget.authProvider.isLoading;
+                      if (kIsWeb) {
+                        return SizedBox(
+                          height: 44,
+                          width: double.infinity,
+                          child: buildGoogleSignInButton(
+                            onPressed: _handleGoogleSignIn,
+                            isLoading: isLoading,
+                          ),
+                        );
+                      }
                       return OutlinedButton.icon(
                         key: const Key('google_signin_button'),
                         onPressed: isLoading ? null : _handleGoogleSignIn,
