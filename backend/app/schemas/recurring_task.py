@@ -1,7 +1,7 @@
 """RecurringTask Pydantic schemas."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 import uuid
 from pydantic import BaseModel, ConfigDict, Field
 from app.models.enums import RecurrenceType, TaskPriority
@@ -12,12 +12,12 @@ class RecurringTaskBase(BaseModel):
     """Base schema for recurring tasks."""
 
     name: str = Field(min_length=1, max_length=255)
-    template_id: Optional[uuid.UUID] = None
+    template_id: Optional[Union[uuid.UUID, str]] = None
     description: Optional[str] = None
     subject_line: Optional[str] = Field(default=None, max_length=500)
-    workflow_id: Optional[uuid.UUID] = None
-    client_id: Optional[uuid.UUID] = None
-    assigned_user_id: Optional[uuid.UUID] = None
+    workflow_id: Optional[Union[uuid.UUID, str]] = None
+    client_id: Optional[Union[uuid.UUID, str]] = None
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = None
     priority: TaskPriority = TaskPriority.MEDIUM
     max_attempts: int = Field(default=2, ge=1)
     due_offset_days: Optional[int] = Field(default=None, ge=0)
@@ -41,12 +41,12 @@ class RecurringTaskUpdate(BaseModel):
     """Schema for updating an existing RecurringTask definition."""
 
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    template_id: Optional[uuid.UUID] = None
+    template_id: Optional[Union[uuid.UUID, str]] = None
     description: Optional[str] = None
     subject_line: Optional[str] = Field(default=None, max_length=500)
-    workflow_id: Optional[uuid.UUID] = None
-    client_id: Optional[uuid.UUID] = None
-    assigned_user_id: Optional[uuid.UUID] = None
+    workflow_id: Optional[Union[uuid.UUID, str]] = None
+    client_id: Optional[Union[uuid.UUID, str]] = None
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = None
     priority: Optional[TaskPriority] = None
     max_attempts: Optional[int] = Field(default=None, ge=1)
     due_offset_days: Optional[int] = Field(default=None, ge=0)
@@ -64,10 +64,10 @@ class RecurringTaskUpdate(BaseModel):
 class RecurringTaskResponse(RecurringTaskBase):
     """Response schema representing a persisted RecurringTask definition."""
 
-    id: uuid.UUID
+    id: Union[uuid.UUID, str]
     next_run_at: datetime
     last_run_at: Optional[datetime] = None
-    created_by_user_id: uuid.UUID
+    created_by_user_id: Union[uuid.UUID, str]
     created_at: datetime
     updated_at: datetime
 

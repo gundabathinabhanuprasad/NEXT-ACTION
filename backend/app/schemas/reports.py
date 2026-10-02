@@ -1,7 +1,7 @@
 """Pydantic schemas for Phase 17 Reports, Exports & Management Insights."""
 
 from datetime import datetime
-from typing import Dict, List, Literal, Optional
+from typing import Dict, List, Literal, Optional, Union
 import uuid
 from pydantic import BaseModel, ConfigDict, Field
 from app.models.enums import TaskPriority, TaskStatus
@@ -29,9 +29,9 @@ class ReportFilterParams(BaseModel):
     date_to: Optional[datetime] = None
     status: Optional[TaskStatus] = None
     priority: Optional[TaskPriority] = None
-    client_id: Optional[uuid.UUID] = None
-    workflow_id: Optional[uuid.UUID] = None
-    assigned_user_id: Optional[uuid.UUID] = None
+    client_id: Optional[Union[uuid.UUID, str]] = None
+    workflow_id: Optional[Union[uuid.UUID, str]] = None
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = None
     unassigned: Optional[bool] = None
     overdue: Optional[bool] = None
     due_today: Optional[bool] = None
@@ -92,17 +92,17 @@ class TaskDetailReportItem(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: uuid.UUID
+    id: Union[uuid.UUID, str]
     title: str
     subject_line: Optional[str] = None
     description: Optional[str] = None
     status: TaskStatus
     priority: TaskPriority
-    client_id: Optional[uuid.UUID] = None
+    client_id: Optional[Union[uuid.UUID, str]] = None
     client_name: Optional[str] = None
-    workflow_id: Optional[uuid.UUID] = None
+    workflow_id: Optional[Union[uuid.UUID, str]] = None
     workflow_name: Optional[str] = None
-    assigned_user_id: Optional[uuid.UUID] = None
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = None
     assigned_user_name: Optional[str] = None
     assigned_user_email: Optional[str] = None
     due_date: Optional[datetime] = None
@@ -157,7 +157,7 @@ class ProductivityReportResponse(BaseModel):
 class WorkloadReportItem(BaseModel):
     """Workload metrics breakdown for an entity (Assignee, Client, Workflow)."""
 
-    id: Optional[uuid.UUID] = None
+    id: Optional[Union[uuid.UUID, str]] = None
     name: str
     email: Optional[str] = None
     open_tasks: int = 0
@@ -188,11 +188,11 @@ class ActivityReportItem(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
-    id: uuid.UUID
-    task_id: Optional[uuid.UUID] = None
+    id: Union[uuid.UUID, str]
+    task_id: Optional[Union[uuid.UUID, str]] = None
     task_title: Optional[str] = None
     action: str
-    actor_id: Optional[uuid.UUID] = None
+    actor_id: Optional[Union[uuid.UUID, str]] = None
     actor_name: Optional[str] = None
     actor_email: Optional[str] = None
     old_value: Optional[str] = None
@@ -233,8 +233,8 @@ class ReminderFollowUpSummary(BaseModel):
 class ReminderReportItem(BaseModel):
     """Single reminder item in scheduling report."""
 
-    id: uuid.UUID
-    task_id: uuid.UUID
+    id: Union[uuid.UUID, str]
+    task_id: Union[uuid.UUID, str]
     task_title: str
     remind_at: datetime
     is_sent: bool
@@ -245,8 +245,8 @@ class ReminderReportItem(BaseModel):
 class FollowUpReportItem(BaseModel):
     """Single follow-up item in scheduling report."""
 
-    id: uuid.UUID
-    task_id: uuid.UUID
+    id: Union[uuid.UUID, str]
+    task_id: Union[uuid.UUID, str]
     task_title: str
     scheduled_at: datetime
     completed_at: Optional[datetime] = None

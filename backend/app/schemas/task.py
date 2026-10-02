@@ -1,9 +1,9 @@
 """Task request and response schemas."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import Any, List, Optional, Union
 import uuid
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.models.enums import TaskPriority, TaskStatus
 
 
@@ -13,22 +13,36 @@ class TaskBase(BaseModel):
     title: str = Field(min_length=1, max_length=255)
     description: Optional[str] = None
     subject_line: Optional[str] = Field(default=None, max_length=500)
-    client_id: Optional[uuid.UUID] = None
-    workflow_id: Optional[uuid.UUID] = None
-    assigned_user_id: Optional[uuid.UUID] = None
-    template_id: Optional[uuid.UUID] = None
-    recurring_task_id: Optional[uuid.UUID] = None
+    client_id: Optional[Union[uuid.UUID, str]] = None
+    workflow_id: Optional[Union[uuid.UUID, str]] = None
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = None
+    template_id: Optional[Union[uuid.UUID, str]] = None
+    recurring_task_id: Optional[Union[uuid.UUID, str]] = None
     status: TaskStatus = TaskStatus.PENDING
     priority: TaskPriority = TaskPriority.MEDIUM
     due_date: Optional[datetime] = None
     next_action_date: Optional[datetime] = None
     max_attempts: int = Field(default=2, ge=1)
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
+
 
 class TaskCreate(TaskBase):
     """Schema for creating a new Task."""
 
-    created_by_user_id: Optional[uuid.UUID] = None
+    created_by_user_id: Optional[Union[uuid.UUID, str]] = None
 
 
 class TaskUpdate(BaseModel):
@@ -37,13 +51,13 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = Field(default=None, min_length=1, max_length=255)
     description: Optional[str] = None
     subject_line: Optional[str] = Field(default=None, max_length=500)
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
 
 
 class TaskResponse(TaskBase):
     """Response schema for a single Task."""
 
-    id: uuid.UUID
+    id: Union[uuid.UUID, str]
     attempt_count: int
     completed_at: Optional[datetime] = None
     created_at: datetime
@@ -67,7 +81,7 @@ class TaskListResponse(BaseModel):
 class AttemptRequest(BaseModel):
     """Schema for recording a normal work attempt."""
 
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
     notes: Optional[str] = None
 
 
@@ -82,7 +96,7 @@ class OverrideAttemptRequest(BaseModel):
         min_length=1,
         description="Mandatory justification for authorized attempt override",
     )
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
 
 
 class PostponeTaskRequest(BaseModel):
@@ -90,27 +104,27 @@ class PostponeTaskRequest(BaseModel):
 
     new_due_date: datetime
     reason: str = Field(min_length=1, description="Mandatory justification for postponement")
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
 
 
 class NextActionDateRequest(BaseModel):
     """Schema for updating next action date."""
 
     next_action_date: Optional[datetime] = None
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
 
 
 class CompleteTaskRequest(BaseModel):
     """Schema for completing a task."""
 
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
 
 
 class ReopenTaskRequest(BaseModel):
     """Schema for reopening a completed task."""
 
     reason: str = Field(min_length=1, description="Mandatory justification for reopening task")
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
 
 
 class StatusChangeRequest(BaseModel):
@@ -118,7 +132,14 @@ class StatusChangeRequest(BaseModel):
 
     status: TaskStatus
     reason: Optional[str] = None
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
 
 
 class PriorityChangeRequest(BaseModel):
@@ -126,18 +147,25 @@ class PriorityChangeRequest(BaseModel):
 
     priority: TaskPriority
     reason: Optional[str] = None
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
+
+    @field_validator("priority", mode="before")
+    @classmethod
+    def normalize_priority(cls, v: Any) -> Any:
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
 
 
 class AssignmentChangeRequest(BaseModel):
     """Schema for assigning or reassigning a task."""
 
-    assigned_user_id: Optional[uuid.UUID] = None
-    assigned_by_user_id: Optional[uuid.UUID] = None
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = None
+    assigned_by_user_id: Optional[Union[uuid.UUID, str]] = None
 
 
 class SubjectLineChangeRequest(BaseModel):
     """Schema for changing subject line."""
 
     subject_line: Optional[str] = Field(default=None, max_length=500)
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None

@@ -92,9 +92,14 @@ class MongoFollowUpService:
         if not task:
             raise TaskNotFoundError(task_id)
         items = []
+        tid_str = str(task_id)
         for f in (task.get("follow_ups") or []):
+            if isinstance(f, dict) and not f.get("task_id"):
+                f["task_id"] = tid_str
             parsed = _safe_parse_follow_up(f)
             if parsed:
+                if parsed.task_id is None:
+                    parsed.task_id = tid_str
                 items.append(parsed)
         return items
 
@@ -106,14 +111,20 @@ class MongoFollowUpService:
         """List uncompleted follow-ups scheduled on or before as_of across all tasks."""
         target_time = as_of or datetime.now(timezone.utc)
         tasks = self.task_repo.collection.find(
-            {"follow_ups": {"$elemMatch": {"completed_at": None, "scheduled_at": {"$lte": target_time}}}}
+            {"follow_ups": {"$elemMatch": {"completed_at": None, "scheduled_at": {"$lte": target_time}}}},
+            projection={"follow_ups": 1, "_id": 1},
         )
         due: List[FollowUpSubDocument] = []
         for t in tasks:
+            t_id = str(t.get("_id", ""))
             for fu in (t.get("follow_ups") or []):
+                if isinstance(fu, dict) and not fu.get("task_id"):
+                    fu["task_id"] = t_id
                 parsed = _safe_parse_follow_up(fu)
                 if not parsed:
                     continue
+                if parsed.task_id is None:
+                    parsed.task_id = t_id
                 sched = _safe_sort_key(parsed.scheduled_at)
                 target_tz = _safe_sort_key(target_time)
                 if parsed.completed_at is None and sched <= target_tz:
@@ -133,9 +144,14 @@ class MongoFollowUpService:
             if not task:
                 return []
             follow_ups = []
+            tid_str = str(task_id)
             for fu in (task.get("follow_ups") or []):
+                if isinstance(fu, dict) and not fu.get("task_id"):
+                    fu["task_id"] = tid_str
                 parsed = _safe_parse_follow_up(fu)
                 if parsed:
+                    if parsed.task_id is None:
+                        parsed.task_id = tid_str
                     follow_ups.append(parsed)
             if is_completed is True:
                 follow_ups = [fu for fu in follow_ups if fu.completed_at is not None]
@@ -144,19 +160,27 @@ class MongoFollowUpService:
             follow_ups.sort(key=lambda x: _safe_sort_key(x.scheduled_at))
             return follow_ups
 
-        query: Dict[str, Any] = {}
+        query: Dict[str, Any] = {"follow_ups.0": {"$exists": True}}
         if is_completed is True:
-            query = {"follow_ups.completed_at": {"$ne": None}}
+            query["follow_ups.completed_at"] = {"$ne": None}
         elif is_completed is False:
-            query = {"follow_ups.completed_at": None}
+            query["follow_ups.completed_at"] = None
 
-        tasks = self.task_repo.collection.find(query)
+        cursor = self.task_repo.collection.find(
+            query,
+            projection={"follow_ups": 1, "_id": 1},
+        )
         res: List[FollowUpSubDocument] = []
-        for t in tasks:
+        for t in cursor:
+            t_id = str(t.get("_id", ""))
             for fu in (t.get("follow_ups") or []):
+                if isinstance(fu, dict) and not fu.get("task_id"):
+                    fu["task_id"] = t_id
                 parsed = _safe_parse_follow_up(fu)
                 if not parsed:
                     continue
+                if parsed.task_id is None:
+                    parsed.task_id = t_id
                 if is_completed is True and parsed.completed_at is not None:
                     res.append(parsed)
                 elif is_completed is False and parsed.completed_at is None:

@@ -2,7 +2,7 @@
 
 import calendar
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 import uuid
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -13,6 +13,8 @@ from app.models.task import Task
 from app.models.task_template import TaskTemplate
 from app.models.user import User
 from app.models.workflow import Workflow
+from app.persistence.gateway import get_persistence_gateway
+from app.persistence.mongodb.recurring_task_service import MongoRecurringTaskService
 from app.services.exceptions import (
     ClientNotFoundError,
     InactiveUserError,
@@ -67,23 +69,34 @@ def compute_next_run(
     return current_run + timedelta(days=interval)
 
 
-def get_recurring_task(db: Session, recurring_task_id: uuid.UUID) -> RecurringTask:
+def get_recurring_task(db: Optional[Session] = None, recurring_task_id: Union[str, uuid.UUID] = "") -> Any:
     """Retrieve a recurring task definition by ID or raise RecurringTaskNotFoundError."""
-    rec = db.get(RecurringTask, recurring_task_id)
+    if get_persistence_gateway().is_mongodb:
+        return MongoRecurringTaskService().get_recurring_task(db=db, recurring_task_id=recurring_task_id)
+    rec = db.get(RecurringTask, recurring_task_id) if db else None
     if not rec:
         raise RecurringTaskNotFoundError(recurring_task_id)
     return rec
 
 
 def list_recurring_tasks(
-    db: Session,
+    db: Optional[Session] = None,
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
-    created_by_user_id: Optional[uuid.UUID] = None,
+    created_by_user_id: Optional[Union[str, uuid.UUID]] = None,
     page: int = 1,
     page_size: int = 20,
-) -> Tuple[List[RecurringTask], int]:
+) -> Tuple[List[Any], int]:
     """List recurring task definitions with optional search, active filtering, and pagination."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoRecurringTaskService().list_recurring_tasks(
+            db=db,
+            search=search,
+            is_active=is_active,
+            created_by_user_id=created_by_user_id,
+            page=page,
+            page_size=page_size,
+        )
     query = select(RecurringTask)
 
     if is_active is not None:
@@ -116,16 +129,16 @@ def list_recurring_tasks(
 
 
 def create_recurring_task(
-    db: Session,
-    name: str,
-    start_date: datetime,
-    created_by_user_id: uuid.UUID,
-    template_id: Optional[uuid.UUID] = None,
+    db: Optional[Session] = None,
+    name: str = "",
+    start_date: datetime = datetime.now(timezone.utc),
+    created_by_user_id: Union[str, uuid.UUID] = "",
+    template_id: Optional[Union[str, uuid.UUID]] = None,
     description: Optional[str] = None,
     subject_line: Optional[str] = None,
-    workflow_id: Optional[uuid.UUID] = None,
-    client_id: Optional[uuid.UUID] = None,
-    assigned_user_id: Optional[uuid.UUID] = None,
+    workflow_id: Optional[Union[str, uuid.UUID]] = None,
+    client_id: Optional[Union[str, uuid.UUID]] = None,
+    assigned_user_id: Optional[Union[str, uuid.UUID]] = None,
     priority: TaskPriority = TaskPriority.MEDIUM,
     max_attempts: int = 2,
     due_offset_days: Optional[int] = None,
@@ -136,8 +149,31 @@ def create_recurring_task(
     day_of_month: Optional[int] = None,
     end_date: Optional[datetime] = None,
     is_active: bool = True,
-) -> RecurringTask:
+) -> Any:
     """Create a new RecurringTask definition."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoRecurringTaskService().create_recurring_task(
+            db=db,
+            name=name,
+            start_date=start_date,
+            created_by_user_id=created_by_user_id,
+            template_id=template_id,
+            description=description,
+            subject_line=subject_line,
+            workflow_id=workflow_id,
+            client_id=client_id,
+            assigned_user_id=assigned_user_id,
+            priority=priority,
+            max_attempts=max_attempts,
+            due_offset_days=due_offset_days,
+            next_action_offset_days=next_action_offset_days,
+            recurrence_type=recurrence_type,
+            interval=interval,
+            day_of_week=day_of_week,
+            day_of_month=day_of_month,
+            end_date=end_date,
+            is_active=is_active,
+        )
     if interval < 1:
         raise InvalidRecurrenceRuleError("Recurrence interval must be at least 1.")
 
@@ -197,16 +233,16 @@ def create_recurring_task(
 
 
 def update_recurring_task(
-    db: Session,
-    recurring_task_id: uuid.UUID,
-    current_user_id: uuid.UUID,
+    db: Optional[Session] = None,
+    recurring_task_id: Union[str, uuid.UUID] = "",
+    current_user_id: Union[str, uuid.UUID] = "",
     name: Optional[str] = None,
-    template_id: Optional[uuid.UUID] = None,
+    template_id: Optional[Union[str, uuid.UUID]] = None,
     description: Optional[str] = None,
     subject_line: Optional[str] = None,
-    workflow_id: Optional[uuid.UUID] = None,
-    client_id: Optional[uuid.UUID] = None,
-    assigned_user_id: Optional[uuid.UUID] = None,
+    workflow_id: Optional[Union[str, uuid.UUID]] = None,
+    client_id: Optional[Union[str, uuid.UUID]] = None,
+    assigned_user_id: Optional[Union[str, uuid.UUID]] = None,
     priority: Optional[TaskPriority] = None,
     max_attempts: Optional[int] = None,
     due_offset_days: Optional[int] = None,
@@ -219,8 +255,33 @@ def update_recurring_task(
     next_run_at: Optional[datetime] = None,
     end_date: Optional[datetime] = None,
     is_active: Optional[bool] = None,
-) -> RecurringTask:
+) -> Any:
     """Update an existing RecurringTask definition with authorization check."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoRecurringTaskService().update_recurring_task(
+            db=db,
+            recurring_task_id=recurring_task_id,
+            current_user_id=current_user_id,
+            name=name,
+            template_id=template_id,
+            description=description,
+            subject_line=subject_line,
+            workflow_id=workflow_id,
+            client_id=client_id,
+            assigned_user_id=assigned_user_id,
+            priority=priority,
+            max_attempts=max_attempts,
+            due_offset_days=due_offset_days,
+            next_action_offset_days=next_action_offset_days,
+            recurrence_type=recurrence_type,
+            interval=interval,
+            day_of_week=day_of_week,
+            day_of_month=day_of_month,
+            start_date=start_date,
+            next_run_at=next_run_at,
+            end_date=end_date,
+            is_active=is_active,
+        )
     rec = get_recurring_task(db, recurring_task_id)
 
     if rec.created_by_user_id != current_user_id:
@@ -292,11 +353,17 @@ def update_recurring_task(
 
 
 def delete_recurring_task(
-    db: Session,
-    recurring_task_id: uuid.UUID,
-    current_user_id: uuid.UUID,
+    db: Optional[Session] = None,
+    recurring_task_id: Union[str, uuid.UUID] = "",
+    current_user_id: Union[str, uuid.UUID] = "",
 ) -> None:
     """Delete a RecurringTask definition with authorization check."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoRecurringTaskService().delete_recurring_task(
+            db=db,
+            recurring_task_id=recurring_task_id,
+            current_user_id=current_user_id,
+        )
     rec = get_recurring_task(db, recurring_task_id)
 
     if rec.created_by_user_id != current_user_id:
@@ -307,10 +374,15 @@ def delete_recurring_task(
 
 
 def evaluate_recurring_tasks(
-    db: Session,
+    db: Optional[Session] = None,
     max_evaluations: int = 50,
-) -> Tuple[int, int, List[Task]]:
+) -> Tuple[int, int, List[Any]]:
     """Evaluate all due recurring tasks in bounded batches and generate tasks idempotently."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoRecurringTaskService().evaluate_recurring_tasks(
+            db=db,
+            max_evaluations=max_evaluations,
+        )
     now = datetime.now(timezone.utc)
 
     # Find active definitions where next_run_at <= now

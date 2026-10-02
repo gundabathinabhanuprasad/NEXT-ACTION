@@ -1,7 +1,7 @@
 """TaskTemplate service implementing template CRUD and task generation."""
 
 from datetime import datetime, timedelta, timezone
-from typing import List, Optional, Tuple
+from typing import Any, List, Optional, Tuple, Union
 import uuid
 from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
@@ -11,6 +11,8 @@ from app.models.task import Task
 from app.models.task_template import TaskTemplate
 from app.models.user import User
 from app.models.workflow import Workflow
+from app.persistence.gateway import get_persistence_gateway
+from app.persistence.mongodb.task_template_service import MongoTaskTemplateService
 from app.services.exceptions import (
     ClientNotFoundError,
     InactiveUserError,
@@ -23,23 +25,34 @@ from app.services.history_service import log_history
 from app.services.task_service import create_task
 
 
-def get_task_template(db: Session, template_id: uuid.UUID) -> TaskTemplate:
+def get_task_template(db: Optional[Session] = None, template_id: Union[str, uuid.UUID] = "") -> Any:
     """Retrieve a task template by ID or raise TaskTemplateNotFoundError."""
-    template = db.get(TaskTemplate, template_id)
+    if get_persistence_gateway().is_mongodb:
+        return MongoTaskTemplateService().get_task_template(db=db, template_id=template_id)
+    template = db.get(TaskTemplate, template_id) if db else None
     if not template:
         raise TaskTemplateNotFoundError(template_id)
     return template
 
 
 def list_task_templates(
-    db: Session,
+    db: Optional[Session] = None,
     search: Optional[str] = None,
     is_active: Optional[bool] = None,
-    created_by_user_id: Optional[uuid.UUID] = None,
+    created_by_user_id: Optional[Union[str, uuid.UUID]] = None,
     page: int = 1,
     page_size: int = 20,
-) -> Tuple[List[TaskTemplate], int]:
+) -> Tuple[List[Any], int]:
     """List task templates with optional search, active filtering, and pagination."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoTaskTemplateService().list_task_templates(
+            db=db,
+            search=search,
+            is_active=is_active,
+            created_by_user_id=created_by_user_id,
+            page=page,
+            page_size=page_size,
+        )
     query = select(TaskTemplate)
 
     if is_active is not None:
@@ -72,21 +85,37 @@ def list_task_templates(
 
 
 def create_task_template(
-    db: Session,
-    name: str,
-    created_by_user_id: uuid.UUID,
+    db: Optional[Session] = None,
+    name: str = "",
+    created_by_user_id: Union[str, uuid.UUID] = "",
     description: Optional[str] = None,
     subject_line: Optional[str] = None,
-    workflow_id: Optional[uuid.UUID] = None,
-    client_id: Optional[uuid.UUID] = None,
-    assigned_user_id: Optional[uuid.UUID] = None,
+    workflow_id: Optional[Union[str, uuid.UUID]] = None,
+    client_id: Optional[Union[str, uuid.UUID]] = None,
+    assigned_user_id: Optional[Union[str, uuid.UUID]] = None,
     priority: TaskPriority = TaskPriority.MEDIUM,
     max_attempts: int = 2,
     default_due_offset_days: Optional[int] = None,
     default_next_action_offset_days: Optional[int] = None,
     is_active: bool = True,
-) -> TaskTemplate:
+) -> Any:
     """Create a new reusable TaskTemplate."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoTaskTemplateService().create_task_template(
+            db=db,
+            name=name,
+            created_by_user_id=created_by_user_id,
+            description=description,
+            subject_line=subject_line,
+            workflow_id=workflow_id,
+            client_id=client_id,
+            assigned_user_id=assigned_user_id,
+            priority=priority,
+            max_attempts=max_attempts,
+            default_due_offset_days=default_due_offset_days,
+            default_next_action_offset_days=default_next_action_offset_days,
+            is_active=is_active,
+        )
     if client_id is not None:
         client = db.get(Client, client_id)
         if not client:
@@ -125,22 +154,39 @@ def create_task_template(
 
 
 def update_task_template(
-    db: Session,
-    template_id: uuid.UUID,
-    current_user_id: uuid.UUID,
+    db: Optional[Session] = None,
+    template_id: Union[str, uuid.UUID] = "",
+    current_user_id: Union[str, uuid.UUID] = "",
     name: Optional[str] = None,
     description: Optional[str] = None,
     subject_line: Optional[str] = None,
-    workflow_id: Optional[uuid.UUID] = None,
-    client_id: Optional[uuid.UUID] = None,
-    assigned_user_id: Optional[uuid.UUID] = None,
+    workflow_id: Optional[Union[str, uuid.UUID]] = None,
+    client_id: Optional[Union[str, uuid.UUID]] = None,
+    assigned_user_id: Optional[Union[str, uuid.UUID]] = None,
     priority: Optional[TaskPriority] = None,
     max_attempts: Optional[int] = None,
     default_due_offset_days: Optional[int] = None,
     default_next_action_offset_days: Optional[int] = None,
     is_active: Optional[bool] = None,
-) -> TaskTemplate:
+) -> Any:
     """Update an existing TaskTemplate with authorization check."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoTaskTemplateService().update_task_template(
+            db=db,
+            template_id=template_id,
+            current_user_id=current_user_id,
+            name=name,
+            description=description,
+            subject_line=subject_line,
+            workflow_id=workflow_id,
+            client_id=client_id,
+            assigned_user_id=assigned_user_id,
+            priority=priority,
+            max_attempts=max_attempts,
+            default_due_offset_days=default_due_offset_days,
+            default_next_action_offset_days=default_next_action_offset_days,
+            is_active=is_active,
+        )
     template = get_task_template(db, template_id)
 
     if template.created_by_user_id != current_user_id:
@@ -189,11 +235,15 @@ def update_task_template(
 
 
 def delete_task_template(
-    db: Session,
-    template_id: uuid.UUID,
-    current_user_id: uuid.UUID,
+    db: Optional[Session] = None,
+    template_id: Union[str, uuid.UUID] = "",
+    current_user_id: Union[str, uuid.UUID] = "",
 ) -> None:
     """Delete a TaskTemplate with authorization check."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoTaskTemplateService().delete_task_template(
+            db=db, template_id=template_id, current_user_id=current_user_id
+        )
     template = get_task_template(db, template_id)
 
     if template.created_by_user_id != current_user_id:
@@ -204,21 +254,37 @@ def delete_task_template(
 
 
 def create_task_from_template(
-    db: Session,
-    template_id: uuid.UUID,
-    created_by_user_id: uuid.UUID,
+    db: Optional[Session] = None,
+    template_id: Union[str, uuid.UUID] = "",
+    created_by_user_id: Union[str, uuid.UUID] = "",
     title: Optional[str] = None,
     description: Optional[str] = None,
     subject_line: Optional[str] = None,
-    workflow_id: Optional[uuid.UUID] = None,
-    client_id: Optional[uuid.UUID] = None,
-    assigned_user_id: Optional[uuid.UUID] = None,
+    workflow_id: Optional[Union[str, uuid.UUID]] = None,
+    client_id: Optional[Union[str, uuid.UUID]] = None,
+    assigned_user_id: Optional[Union[str, uuid.UUID]] = None,
     priority: Optional[TaskPriority] = None,
     max_attempts: Optional[int] = None,
     due_date: Optional[datetime] = None,
     next_action_date: Optional[datetime] = None,
-) -> Task:
+) -> Any:
     """Instantiate a concrete Task from a TaskTemplate applying default offsets and overrides."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoTaskTemplateService().create_task_from_template(
+            db=db,
+            template_id=template_id,
+            created_by_user_id=created_by_user_id,
+            title=title,
+            description=description,
+            subject_line=subject_line,
+            workflow_id=workflow_id,
+            client_id=client_id,
+            assigned_user_id=assigned_user_id,
+            priority=priority,
+            max_attempts=max_attempts,
+            due_date=due_date,
+            next_action_date=next_action_date,
+        )
     template = get_task_template(db, template_id)
 
     now = datetime.now(timezone.utc)

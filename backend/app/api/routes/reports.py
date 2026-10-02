@@ -1,7 +1,7 @@
 """Reports and Exports API router for Phase 17 Management Insights."""
 
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any, Optional, Union
 import uuid
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy.orm import Session
@@ -77,9 +77,9 @@ def get_task_summary(
     search: Optional[str] = Query(default=None),
     status_filter: Optional[TaskStatus] = Query(default=None, alias="status"),
     priority: Optional[TaskPriority] = Query(default=None),
-    client_id: Optional[uuid.UUID] = Query(default=None),
-    workflow_id: Optional[uuid.UUID] = Query(default=None),
-    assigned_user_id: Optional[uuid.UUID] = Query(default=None),
+    client_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    workflow_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
     unassigned: Optional[bool] = Query(default=None),
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
@@ -130,9 +130,9 @@ def get_task_detail(
     search: Optional[str] = Query(default=None),
     status_filter: Optional[TaskStatus] = Query(default=None, alias="status"),
     priority: Optional[TaskPriority] = Query(default=None),
-    client_id: Optional[uuid.UUID] = Query(default=None),
-    workflow_id: Optional[uuid.UUID] = Query(default=None),
-    assigned_user_id: Optional[uuid.UUID] = Query(default=None),
+    client_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    workflow_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
     unassigned: Optional[bool] = Query(default=None),
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
@@ -194,9 +194,9 @@ def get_task_detail(
 def get_productivity(
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
-    client_id: Optional[uuid.UUID] = Query(default=None),
-    workflow_id: Optional[uuid.UUID] = Query(default=None),
-    assigned_user_id: Optional[uuid.UUID] = Query(default=None),
+    client_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    workflow_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
     unassigned: Optional[bool] = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -248,8 +248,8 @@ def get_workload(
 )
 def get_activity(
     action: Optional[str] = Query(default=None),
-    actor_id: Optional[uuid.UUID] = Query(default=None),
-    task_id: Optional[uuid.UUID] = Query(default=None),
+    actor_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    task_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
     search: Optional[str] = Query(default=None),
@@ -329,9 +329,9 @@ def export_report(
     search: Optional[str] = Query(default=None),
     status_filter: Optional[TaskStatus] = Query(default=None, alias="status"),
     priority: Optional[TaskPriority] = Query(default=None),
-    client_id: Optional[uuid.UUID] = Query(default=None),
-    workflow_id: Optional[uuid.UUID] = Query(default=None),
-    assigned_user_id: Optional[uuid.UUID] = Query(default=None),
+    client_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    workflow_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
     unassigned: Optional[bool] = Query(default=None),
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
@@ -343,8 +343,8 @@ def export_report(
     near_max_attempts: Optional[bool] = Query(default=None),
     source: Optional[str] = Query(default=None, pattern="^(manual|template|recurring)$"),
     action: Optional[str] = Query(default=None),
-    actor_id: Optional[uuid.UUID] = Query(default=None),
-    task_id: Optional[uuid.UUID] = Query(default=None),
+    actor_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    task_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> Response:
@@ -408,9 +408,9 @@ def export_tasks_report(
     search: Optional[str] = Query(default=None),
     status_filter: Optional[TaskStatus] = Query(default=None, alias="status"),
     priority: Optional[TaskPriority] = Query(default=None),
-    client_id: Optional[uuid.UUID] = Query(default=None),
-    workflow_id: Optional[uuid.UUID] = Query(default=None),
-    assigned_user_id: Optional[uuid.UUID] = Query(default=None),
+    client_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    workflow_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
     unassigned: Optional[bool] = Query(default=None),
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
@@ -452,8 +452,8 @@ def export_tasks_report(
 def export_activity_report(
     format: ExportFormat = Query(default="csv"),
     action: Optional[str] = Query(default=None),
-    actor_id: Optional[uuid.UUID] = Query(default=None),
-    task_id: Optional[uuid.UUID] = Query(default=None),
+    actor_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
+    task_id: Optional[Union[uuid.UUID, str]] = Query(default=None),
     date_from: Optional[datetime] = Query(default=None),
     date_to: Optional[datetime] = Query(default=None),
     search: Optional[str] = Query(default=None),

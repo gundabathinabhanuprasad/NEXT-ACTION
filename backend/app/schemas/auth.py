@@ -1,7 +1,7 @@
 """Authentication and User Pydantic request/response schemas."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 import uuid
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
@@ -17,7 +17,7 @@ class UserCreate(BaseModel):
 class UserResponse(BaseModel):
     """Safe public schema for User entity (never exposes password or password_hash)."""
 
-    id: uuid.UUID
+    id: Union[uuid.UUID, str]
     name: str
     email: str
     is_active: bool

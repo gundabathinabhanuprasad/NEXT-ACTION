@@ -1,7 +1,7 @@
 """Pydantic schemas for Dashboard, Productivity Analytics & Workload Insights."""
 
 from datetime import datetime
-from typing import List, Literal, Optional
+from typing import List, Literal, Optional, Union
 import uuid
 from pydantic import BaseModel, ConfigDict
 from app.schemas.history import TaskHistoryResponse
@@ -67,7 +67,7 @@ class DashboardAttemptPressure(BaseModel):
 class AssigneeWorkloadItem(BaseModel):
     """Operational workload summary per team member / unassigned."""
 
-    user_id: Optional[uuid.UUID] = None
+    user_id: Optional[Union[uuid.UUID, str]] = None
     user_name: str
     open_tasks: int
     due_today: int
@@ -78,7 +78,7 @@ class AssigneeWorkloadItem(BaseModel):
 class ClientWorkloadItem(BaseModel):
     """Operational workload summary per client."""
 
-    client_id: uuid.UUID
+    client_id: Union[uuid.UUID, str]
     client_name: str
     open_tasks: int
     due_today: int
@@ -89,7 +89,7 @@ class ClientWorkloadItem(BaseModel):
 class WorkflowWorkloadItem(BaseModel):
     """Operational workload summary per workflow."""
 
-    workflow_id: uuid.UUID
+    workflow_id: Union[uuid.UUID, str]
     workflow_name: str
     open_tasks: int
     due_today: int

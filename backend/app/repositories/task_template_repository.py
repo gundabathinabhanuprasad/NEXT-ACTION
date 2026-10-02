@@ -42,6 +42,8 @@ class TaskTemplateRepository(BaseMongoRepository):
         is_active: Optional[bool] = None,
         workflow_id: Optional[Union[str, uuid.UUID]] = None,
         client_id: Optional[Union[str, uuid.UUID]] = None,
+        created_by_user_id: Optional[Union[str, uuid.UUID]] = None,
+        search: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> Tuple[List[Dict[str, Any]], int]:
@@ -53,4 +55,13 @@ class TaskTemplateRepository(BaseMongoRepository):
             query["workflow_id"] = str(workflow_id)
         if client_id is not None:
             query["client_id"] = str(client_id)
-        return self.paginate_find(query, sort_by="name", sort_order="asc", page=page, page_size=page_size)
+        if created_by_user_id is not None:
+            query["created_by_user_id"] = str(created_by_user_id)
+        if search and search.strip():
+            term = search.strip()
+            query["$or"] = [
+                {"name": {"$regex": term, "$options": "i"}},
+                {"description": {"$regex": term, "$options": "i"}},
+                {"subject_line": {"$regex": term, "$options": "i"}},
+            ]
+        return self.paginate_find(query, sort_by="created_at", sort_order="desc", page=page, page_size=page_size)

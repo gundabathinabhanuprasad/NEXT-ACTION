@@ -74,11 +74,22 @@ class RecurringTaskRepository(BaseMongoRepository):
     def list_recurring(
         self,
         is_active: Optional[bool] = None,
+        created_by_user_id: Optional[Union[str, uuid.UUID]] = None,
+        search: Optional[str] = None,
         page: int = 1,
         page_size: int = 20,
     ) -> Tuple[List[Dict[str, Any]], int]:
-        """List recurring tasks with optional is_active filter and pagination."""
+        """List recurring tasks with optional is_active filter, search, and pagination."""
         query: Dict[str, Any] = {}
         if is_active is not None:
             query["is_active"] = is_active
+        if created_by_user_id is not None:
+            query["created_by_user_id"] = str(created_by_user_id)
+        if search and search.strip():
+            term = search.strip()
+            query["$or"] = [
+                {"name": {"$regex": term, "$options": "i"}},
+                {"description": {"$regex": term, "$options": "i"}},
+                {"subject_line": {"$regex": term, "$options": "i"}},
+            ]
         return self.paginate_find(query, sort_by="created_at", sort_order="desc", page=page, page_size=page_size)

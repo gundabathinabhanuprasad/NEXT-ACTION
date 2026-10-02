@@ -1,7 +1,7 @@
 """TaskTemplate Pydantic schemas."""
 
 from datetime import datetime
-from typing import List, Optional
+from typing import List, Optional, Union
 import uuid
 from pydantic import BaseModel, ConfigDict, Field
 from app.models.enums import TaskPriority
@@ -13,9 +13,9 @@ class TaskTemplateBase(BaseModel):
     name: str = Field(min_length=1, max_length=255)
     description: Optional[str] = None
     subject_line: Optional[str] = Field(default=None, max_length=500)
-    workflow_id: Optional[uuid.UUID] = None
-    client_id: Optional[uuid.UUID] = None
-    assigned_user_id: Optional[uuid.UUID] = None
+    workflow_id: Optional[Union[uuid.UUID, str]] = None
+    client_id: Optional[Union[uuid.UUID, str]] = None
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = None
     priority: TaskPriority = TaskPriority.MEDIUM
     max_attempts: int = Field(default=2, ge=1)
     default_due_offset_days: Optional[int] = Field(default=None, ge=0)
@@ -35,9 +35,9 @@ class TaskTemplateUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     description: Optional[str] = None
     subject_line: Optional[str] = Field(default=None, max_length=500)
-    workflow_id: Optional[uuid.UUID] = None
-    client_id: Optional[uuid.UUID] = None
-    assigned_user_id: Optional[uuid.UUID] = None
+    workflow_id: Optional[Union[uuid.UUID, str]] = None
+    client_id: Optional[Union[uuid.UUID, str]] = None
+    assigned_user_id: Optional[Union[uuid.UUID, str]] = None
     priority: Optional[TaskPriority] = None
     max_attempts: Optional[int] = Field(default=None, ge=1)
     default_due_offset_days: Optional[int] = Field(default=None, ge=0)
@@ -48,8 +48,8 @@ class TaskTemplateUpdate(BaseModel):
 class TaskTemplateResponse(TaskTemplateBase):
     """Response schema representing a persisted TaskTemplate."""
 
-    id: uuid.UUID
-    created_by_user_id: uuid.UUID
+    id: Union[uuid.UUID, str]
+    created_by_user_id: Union[uuid.UUID, str]
     created_at: datetime
     updated_at: datetime
 

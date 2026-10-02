@@ -178,3 +178,25 @@ class BaseMongoRepository:
 
         items = [self.format_document(doc) for doc in cursor if doc is not None]
         return items, total
+
+    def paginate(
+        self,
+        query: Optional[Dict[str, Any]] = None,
+        page: int = 1,
+        page_size: int = 20,
+        sort: Optional[Any] = None,
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """Perform paginated document retrieval with total count calculation supporting list of sort tuples."""
+        filter_query = query or {}
+        total = self.collection.count_documents(filter_query)
+
+        skip_count = max(0, (page - 1) * page_size)
+        cursor = self.collection.find(filter_query).skip(skip_count).limit(page_size)
+
+        if sort is not None:
+            cursor = cursor.sort(sort)
+        else:
+            cursor = cursor.sort("created_at", DESCENDING)
+
+        items = [self.format_document(doc) for doc in cursor if doc is not None]
+        return items, total

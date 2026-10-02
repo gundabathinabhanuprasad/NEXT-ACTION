@@ -4,7 +4,7 @@ import csv
 from datetime import datetime, timedelta, timezone
 import io
 import json
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import uuid
 from sqlalchemy import and_, case, func, or_, select
 from sqlalchemy.orm import Session, joinedload
@@ -16,6 +16,8 @@ from app.models.task import Task
 from app.models.task_history import TaskHistory
 from app.models.user import User
 from app.models.workflow import Workflow
+from app.persistence.gateway import get_persistence_gateway
+from app.persistence.mongodb.report_service import MongoReportService
 from app.schemas.reports import (
     ActivityReportItem,
     ActivityReportResponse,
@@ -163,7 +165,10 @@ def _apply_task_filters(stmt, count_stmt, filters: ReportFilterParams, now: date
 # =============================================================================
 
 def get_task_summary_report(db: Session, filters: Optional[ReportFilterParams] = None) -> TaskSummaryReport:
-    """Compute aggregated Task Summary metrics entirely inside PostgreSQL."""
+    """Compute aggregated Task Summary metrics entirely inside PostgreSQL or MongoDB."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoReportService().get_task_summary_report(filters=filters)
+
     now = datetime.now(timezone.utc)
     today_start = datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=timezone.utc)
     today_end = datetime(now.year, now.month, now.day, 23, 59, 59, 999999, tzinfo=timezone.utc)
@@ -290,6 +295,15 @@ def get_task_detail_report(
     page_size: int = 20,
 ) -> TaskDetailReportResponse:
     """Retrieve detailed, filterable, and paginated task list with resolved relations."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoReportService().get_task_detail_report(
+            filters=filters,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            page=page,
+            page_size=page_size,
+        )
+
     now = datetime.now(timezone.utc)
     stmt = (
         select(Task)
@@ -380,6 +394,13 @@ def get_productivity_report(
     filters: Optional[ReportFilterParams] = None,
 ) -> ProductivityReportResponse:
     """Compute productivity and completion rate metrics with zero-filled daily buckets."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoReportService().get_productivity_report(
+            date_from=date_from,
+            date_to=date_to,
+            filters=filters,
+        )
+
     now = datetime.now(timezone.utc)
     if date_to is None:
         date_to = now.replace(hour=23, minute=59, second=59, microsecond=999999)
@@ -527,6 +548,9 @@ def get_productivity_report(
 
 def get_workload_report(db: Session, filters: Optional[ReportFilterParams] = None) -> WorkloadReportResponse:
     """Compute multi-dimensional operational workload breakdown across Assignees, Clients, and Workflows."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoReportService().get_workload_report(filters=filters)
+
     now = datetime.now(timezone.utc)
     today_start = datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=timezone.utc)
     today_end = datetime(now.year, now.month, now.day, 23, 59, 59, 999999, tzinfo=timezone.utc)
@@ -716,8 +740,8 @@ def get_workload_report(db: Session, filters: Optional[ReportFilterParams] = Non
 def get_activity_report(
     db: Session,
     action: Optional[str] = None,
-    actor_id: Optional[uuid.UUID] = None,
-    task_id: Optional[uuid.UUID] = None,
+    actor_id: Optional[Union[uuid.UUID, str]] = None,
+    task_id: Optional[Union[uuid.UUID, str]] = None,
     date_from: Optional[datetime] = None,
     date_to: Optional[datetime] = None,
     search: Optional[str] = None,
@@ -725,6 +749,18 @@ def get_activity_report(
     page_size: int = 20,
 ) -> ActivityReportResponse:
     """Retrieve audit history logs with action distributions and pagination."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoReportService().get_activity_report(
+            action=action,
+            actor_id=actor_id,
+            task_id=task_id,
+            date_from=date_from,
+            date_to=date_to,
+            search=search,
+            page=page,
+            page_size=page_size,
+        )
+
     query = (
         select(TaskHistory)
         .options(
@@ -823,6 +859,9 @@ def get_reminders_followups_report(
     filters: Optional[ReportFilterParams] = None,
 ) -> ReminderFollowUpReportResponse:
     """Compute scheduling queues report with task linkages and KPI aggregates."""
+    if get_persistence_gateway().is_mongodb:
+        return MongoReportService().get_reminders_followups_report(filters=filters)
+
     now = datetime.now(timezone.utc)
     today_start = datetime(now.year, now.month, now.day, 0, 0, 0, tzinfo=timezone.utc)
     today_end = datetime(now.year, now.month, now.day, 23, 59, 59, 999999, tzinfo=timezone.utc)

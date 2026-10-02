@@ -44,12 +44,12 @@ def get_current_user(
         raise InvalidTokenError("Token missing subject identifier.")
 
     try:
-        user_uuid = uuid.UUID(sub)
-    except ValueError:
-        raise InvalidTokenError("Malformed token subject claim.")
+        user_id_val = uuid.UUID(sub)
+    except (ValueError, AttributeError):
+        user_id_val = str(sub)
 
     try:
-        user = get_user_by_id(db, user_uuid)
+        user = get_user_by_id(db, user_id_val)
     except UserNotFoundError:
         raise InvalidTokenError("Authenticated user account no longer exists.")
 
