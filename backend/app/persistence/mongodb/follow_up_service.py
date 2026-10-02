@@ -10,6 +10,28 @@ from app.repositories import TaskRepository
 from app.services.exceptions import FollowUpNotFoundError, TaskNotFoundError
 
 
+def _safe_sort_key(dt: Optional[datetime]) -> datetime:
+    """Return a timezone-aware UTC datetime for safe cross-comparison and sorting."""
+    if dt is None:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _safe_parse_follow_up(raw: Any) -> Optional[FollowUpSubDocument]:
+    """Safely validate a raw MongoDB subdocument into a FollowUpSubDocument."""
+    if not isinstance(raw, dict):
+        return None
+    try:
+        data = dict(raw)
+        if not data.get("scheduled_at"):
+            data["scheduled_at"] = utcnow()
+        return FollowUpSubDocument.model_validate(data)
+    except Exception:
+        return None
+
+
 class MongoFollowUpService:
     """Follow-up service implementation using embedded task follow-ups."""
 
@@ -30,7 +52,7 @@ class MongoFollowUpService:
 
         follow_up = FollowUpSubDocument(
             task_id=str(task_id),
-            scheduled_at=scheduled_at,
+            scheduled_at=scheduled_at or utcnow(),
             notes=notes.strip() if notes else None,
         )
         self.task_repo.add_follow_up(task_id, follow_up)
@@ -52,9 +74,11 @@ class MongoFollowUpService:
         if not task:
             raise FollowUpNotFoundError(follow_up_id)
 
-        for fu in task.get("follow_ups", []):
-            if fu.get("id") == fid_str:
-                return FollowUpSubDocument.model_validate(fu)
+        for fu in (task.get("follow_ups") or []):
+            if isinstance(fu, dict) and fu.get("id") == fid_str:
+                parsed = _safe_parse_follow_up(fu)
+                if parsed:
+                    return parsed
 
         raise FollowUpNotFoundError(follow_up_id)
 
@@ -67,7 +91,12 @@ class MongoFollowUpService:
         task = self.task_repo.get_by_id(task_id)
         if not task:
             raise TaskNotFoundError(task_id)
-        return [FollowUpSubDocument.model_validate(f) for f in task.get("follow_ups", [])]
+        items = []
+        for f in (task.get("follow_ups") or []):
+            parsed = _safe_parse_follow_up(f)
+            if parsed:
+                items.append(parsed)
+        return items
 
     def list_due_follow_ups(
         self,
@@ -81,10 +110,15 @@ class MongoFollowUpService:
         )
         due: List[FollowUpSubDocument] = []
         for t in tasks:
-            for fu in t.get("follow_ups", []):
-                if fu.get("completed_at") is None and fu.get("scheduled_at") and fu["scheduled_at"] <= target_time:
-                    due.append(FollowUpSubDocument.model_validate(fu))
-        due.sort(key=lambda x: x.scheduled_at or datetime.min.replace(tzinfo=timezone.utc))
+            for fu in (t.get("follow_ups") or []):
+                parsed = _safe_parse_follow_up(fu)
+                if not parsed:
+                    continue
+                sched = _safe_sort_key(parsed.scheduled_at)
+                target_tz = _safe_sort_key(target_time)
+                if parsed.completed_at is None and sched <= target_tz:
+                    due.append(parsed)
+        due.sort(key=lambda x: _safe_sort_key(x.scheduled_at))
         return due
 
     def list_follow_ups(
@@ -98,12 +132,16 @@ class MongoFollowUpService:
             task = self.task_repo.get_by_id(task_id)
             if not task:
                 return []
-            follow_ups = [FollowUpSubDocument.model_validate(fu) for fu in task.get("follow_ups", [])]
+            follow_ups = []
+            for fu in (task.get("follow_ups") or []):
+                parsed = _safe_parse_follow_up(fu)
+                if parsed:
+                    follow_ups.append(parsed)
             if is_completed is True:
                 follow_ups = [fu for fu in follow_ups if fu.completed_at is not None]
             elif is_completed is False:
                 follow_ups = [fu for fu in follow_ups if fu.completed_at is None]
-            follow_ups.sort(key=lambda x: x.scheduled_at or datetime.min.replace(tzinfo=timezone.utc))
+            follow_ups.sort(key=lambda x: _safe_sort_key(x.scheduled_at))
             return follow_ups
 
         query: Dict[str, Any] = {}
@@ -115,14 +153,17 @@ class MongoFollowUpService:
         tasks = self.task_repo.collection.find(query)
         res: List[FollowUpSubDocument] = []
         for t in tasks:
-            for fu in t.get("follow_ups", []):
-                if is_completed is True and fu.get("completed_at") is not None:
-                    res.append(FollowUpSubDocument.model_validate(fu))
-                elif is_completed is False and fu.get("completed_at") is None:
-                    res.append(FollowUpSubDocument.model_validate(fu))
+            for fu in (t.get("follow_ups") or []):
+                parsed = _safe_parse_follow_up(fu)
+                if not parsed:
+                    continue
+                if is_completed is True and parsed.completed_at is not None:
+                    res.append(parsed)
+                elif is_completed is False and parsed.completed_at is None:
+                    res.append(parsed)
                 elif is_completed is None:
-                    res.append(FollowUpSubDocument.model_validate(fu))
-        res.sort(key=lambda x: x.scheduled_at or datetime.min.replace(tzinfo=timezone.utc))
+                    res.append(parsed)
+        res.sort(key=lambda x: _safe_sort_key(x.scheduled_at))
         return res
 
     def complete_follow_up(
@@ -155,9 +196,11 @@ class MongoFollowUpService:
             )
             updated = self.task_repo.get_by_id(tid_str) or updated
 
-        for fu in updated.get("follow_ups", []):
-            if fu.get("id") == fid_str:
-                return FollowUpSubDocument.model_validate(fu)
+        for fu in (updated.get("follow_ups") or []):
+            if isinstance(fu, dict) and fu.get("id") == fid_str:
+                parsed = _safe_parse_follow_up(fu)
+                if parsed:
+                    return parsed
 
         raise FollowUpNotFoundError(follow_up_id)
 

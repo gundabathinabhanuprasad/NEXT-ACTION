@@ -757,3 +757,48 @@ def test_mongo_refresh_token_lifecycle_and_replay_protection(mongo_services):
     # 4. Verify all tokens for the user are now invalidated
     with pytest.raises(RefreshTokenRevokedError):
         user_svc.rotate_refresh_token(token_str=new_raw)
+
+
+def test_mongo_follow_ups_and_reminders_null_resilience(mongo_services):
+    """Verify follow-up and reminder services handle None or malformed embedded items safely."""
+    follow_up_svc = mongo_services["follow_up"]
+    reminder_svc = mongo_services["reminder"]
+    task_repo = follow_up_svc.task_repo
+
+    # 1. Document with explicit None for subdocument arrays
+    task_repo.collection.insert_one({
+        "_id": str(uuid.uuid4()),
+        "title": "Legacy Task with None Lists",
+        "status": "pending",
+        "priority": "medium",
+        "attempt_count": 0,
+        "max_attempts": 2,
+        "reminders": None,
+        "follow_ups": None,
+    })
+
+    # 2. Document with partial/legacy subdocuments
+    task_repo.collection.insert_one({
+        "_id": str(uuid.uuid4()),
+        "title": "Legacy Task with Partial Subdocs",
+        "status": "pending",
+        "priority": "medium",
+        "attempt_count": 0,
+        "max_attempts": 2,
+        "reminders": [{"id": "rem-legacy", "message": "Legacy reminder"}],
+        "follow_ups": [{"id": "fu-legacy", "notes": "Legacy note"}],
+    })
+
+    # None of these must raise TypeError or ValidationError
+    all_fus = follow_up_svc.list_follow_ups()
+    assert len(all_fus) >= 1
+
+    due_fus = follow_up_svc.list_due_follow_ups()
+    assert isinstance(due_fus, list)
+
+    all_rems = reminder_svc.list_reminders()
+    assert len(all_rems) >= 1
+
+    due_rems = reminder_svc.list_due_reminders()
+    assert isinstance(due_rems, list)
+

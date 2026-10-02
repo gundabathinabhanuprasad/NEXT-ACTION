@@ -3,7 +3,7 @@
 from datetime import datetime
 from typing import List, Optional
 from pydantic import Field
-from app.documents.common import BaseDocument, BaseSubDocument
+from app.documents.common import BaseDocument, BaseSubDocument, utcnow
 from app.models.enums import TaskPriority, TaskStatus
 
 
@@ -11,7 +11,7 @@ class ReminderSubDocument(BaseSubDocument):
     """Embedded reminder alert within a Task document."""
 
     task_id: Optional[str] = Field(default=None, description="Parent Task UUID string")
-    remind_at: datetime = Field(description="Alert trigger UTC timestamp")
+    remind_at: Optional[datetime] = Field(default_factory=utcnow, description="Alert trigger UTC timestamp")
     message: str = Field(default="Reminder alert", min_length=1)
     is_sent: bool = Field(default=False)
 
@@ -20,7 +20,7 @@ class FollowUpSubDocument(BaseSubDocument):
     """Embedded follow-up action item within a Task document."""
 
     task_id: Optional[str] = Field(default=None, description="Parent Task UUID string")
-    scheduled_at: datetime = Field(description="Target follow-up UTC timestamp")
+    scheduled_at: Optional[datetime] = Field(default_factory=utcnow, description="Target follow-up UTC timestamp")
     completed_at: Optional[datetime] = Field(default=None)
     notes: Optional[str] = Field(default=None)
 

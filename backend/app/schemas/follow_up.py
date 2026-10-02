@@ -1,7 +1,7 @@
 """FollowUp request and response schemas."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Union
 import uuid
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -24,9 +24,9 @@ class FollowUpCompleteRequest(BaseModel):
 class FollowUpResponse(BaseModel):
     """Schema representing a FollowUp."""
 
-    id: uuid.UUID
-    task_id: Optional[uuid.UUID] = None
-    scheduled_at: datetime
+    id: Union[uuid.UUID, str]
+    task_id: Optional[Union[uuid.UUID, str]] = None
+    scheduled_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     notes: Optional[str] = None
     created_at: Optional[datetime] = None

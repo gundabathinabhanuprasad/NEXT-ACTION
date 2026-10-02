@@ -107,11 +107,12 @@ def test_verify_google_id_token_invalid_issuer():
         "sub": "attacker-sub",
         "email": "attacker@example.com",
         "email_verified": True,
+        "aud": "valid-client-id.apps.googleusercontent.com",
     }
 
     with patch("google.oauth2.id_token.verify_oauth2_token", return_value=mock_payload):
         with pytest.raises(InvalidGoogleTokenError, match="Invalid Google token issuer"):
-            verify_google_id_token("forged-issuer-token")
+            verify_google_id_token("forged-issuer-token", client_ids=["valid-client-id.apps.googleusercontent.com"])
 
 
 def test_verify_google_id_token_missing_sub_or_email():
@@ -120,19 +121,21 @@ def test_verify_google_id_token_missing_sub_or_email():
         "iss": "https://accounts.google.com",
         "email": "valid@gmail.com",
         "email_verified": True,
+        "aud": "valid-client-id.apps.googleusercontent.com",
     }
     with patch("google.oauth2.id_token.verify_oauth2_token", return_value=missing_sub):
         with pytest.raises(InvalidGoogleTokenError, match="subject identifier"):
-            verify_google_id_token("no-sub-token")
+            verify_google_id_token("no-sub-token", client_ids=["valid-client-id.apps.googleusercontent.com"])
 
     missing_email = {
         "iss": "https://accounts.google.com",
         "sub": "12345",
         "email_verified": True,
+        "aud": "valid-client-id.apps.googleusercontent.com",
     }
     with patch("google.oauth2.id_token.verify_oauth2_token", return_value=missing_email):
         with pytest.raises(InvalidGoogleTokenError, match="valid email"):
-            verify_google_id_token("no-email-token")
+            verify_google_id_token("no-email-token", client_ids=["valid-client-id.apps.googleusercontent.com"])
 
 
 # ==============================================================================

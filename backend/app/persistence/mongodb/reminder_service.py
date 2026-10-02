@@ -4,9 +4,32 @@ from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional, Union
 import uuid
 
+from app.documents.common import utcnow
 from app.documents.task import ReminderSubDocument
 from app.repositories import TaskRepository
 from app.services.exceptions import ReminderNotFoundError, TaskNotFoundError
+
+
+def _safe_sort_key(dt: Optional[datetime]) -> datetime:
+    """Return a timezone-aware UTC datetime for safe cross-comparison and sorting."""
+    if dt is None:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt
+
+
+def _safe_parse_reminder(raw: Any) -> Optional[ReminderSubDocument]:
+    """Safely validate a raw MongoDB subdocument into a ReminderSubDocument."""
+    if not isinstance(raw, dict):
+        return None
+    try:
+        data = dict(raw)
+        if not data.get("remind_at"):
+            data["remind_at"] = utcnow()
+        return ReminderSubDocument.model_validate(data)
+    except Exception:
+        return None
 
 
 class MongoReminderService:
@@ -29,7 +52,7 @@ class MongoReminderService:
 
         reminder = ReminderSubDocument(
             task_id=str(task_id),
-            remind_at=remind_at,
+            remind_at=remind_at or utcnow(),
             message=message.strip(),
             is_sent=False,
         )
@@ -52,9 +75,11 @@ class MongoReminderService:
         if not task:
             raise ReminderNotFoundError(reminder_id)
 
-        for rem in task.get("reminders", []):
-            if rem.get("id") == rid_str:
-                return ReminderSubDocument.model_validate(rem)
+        for rem in (task.get("reminders") or []):
+            if isinstance(rem, dict) and rem.get("id") == rid_str:
+                parsed = _safe_parse_reminder(rem)
+                if parsed:
+                    return parsed
 
         raise ReminderNotFoundError(reminder_id)
 
@@ -83,7 +108,12 @@ class MongoReminderService:
         task = self.task_repo.get_by_id(task_id)
         if not task:
             raise TaskNotFoundError(task_id)
-        return [ReminderSubDocument.model_validate(r) for r in task.get("reminders", [])]
+        items = []
+        for r in (task.get("reminders") or []):
+            parsed = _safe_parse_reminder(r)
+            if parsed:
+                items.append(parsed)
+        return items
 
     def list_due_reminders(
         self,
@@ -97,9 +127,15 @@ class MongoReminderService:
         )
         due = []
         for t in tasks:
-            for r in t.get("reminders", []):
-                if not r.get("is_sent", False) and r.get("remind_at") and r["remind_at"] <= target_time:
-                    due.append(ReminderSubDocument.model_validate(r))
+            for r in (t.get("reminders") or []):
+                parsed = _safe_parse_reminder(r)
+                if not parsed:
+                    continue
+                remind = _safe_sort_key(parsed.remind_at)
+                target_tz = _safe_sort_key(target_time)
+                if not parsed.is_sent and remind <= target_tz:
+                    due.append(parsed)
+        due.sort(key=lambda x: _safe_sort_key(x.remind_at))
         return due
 
     def list_reminders(
@@ -113,19 +149,29 @@ class MongoReminderService:
             task = self.task_repo.get_by_id(task_id)
             if not task:
                 return []
-            reminders = [ReminderSubDocument.model_validate(r) for r in task.get("reminders", [])]
+            reminders = []
+            for r in (task.get("reminders") or []):
+                parsed = _safe_parse_reminder(r)
+                if parsed:
+                    reminders.append(parsed)
             if is_sent is not None:
                 reminders = [r for r in reminders if r.is_sent == is_sent]
+            reminders.sort(key=lambda x: _safe_sort_key(x.remind_at))
             return reminders
+
         query: Dict[str, Any] = {}
         if is_sent is not None:
             query = {"reminders.is_sent": is_sent}
         tasks = self.task_repo.collection.find(query)
         res = []
         for t in tasks:
-            for r in t.get("reminders", []):
-                if is_sent is None or r.get("is_sent") == is_sent:
-                    res.append(ReminderSubDocument.model_validate(r))
+            for r in (t.get("reminders") or []):
+                parsed = _safe_parse_reminder(r)
+                if not parsed:
+                    continue
+                if is_sent is None or parsed.is_sent == is_sent:
+                    res.append(parsed)
+        res.sort(key=lambda x: _safe_sort_key(x.remind_at))
         return res
 
     def delete_reminder(

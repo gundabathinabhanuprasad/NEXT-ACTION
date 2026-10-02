@@ -18,7 +18,7 @@ Verifies:
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Generator
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import uuid
 import pytest
 from pymongo import MongoClient
@@ -684,10 +684,11 @@ def test_dual_write_mongodb_failure_resilience(db: Session):
         global_dual_writer.clear_recent_results()
 
 
-def test_migration_cli_dry_run():
+def test_migration_cli_dry_run(mongo_test_db: Database):
     """Test that migration CLI runs dry-run mode and returns exit code 0."""
-    exit_code = cli_main(["--mode", "dry-run"])
-    assert exit_code == 0
+    with patch("app.migration.cli.get_mongodb_database", return_value=mongo_test_db):
+        exit_code = cli_main(["--mode", "dry-run"])
+        assert exit_code == 0
 
 
 def test_migration_safety_checks(db: Session, mongo_test_db: Database):
