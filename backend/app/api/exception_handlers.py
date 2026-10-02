@@ -173,7 +173,8 @@ def register_exception_handlers(app: FastAPI) -> None:
             status_code=500,
             content={
                 "error": "INTERNAL_SERVER_ERROR",
-                "message": "An unexpected server error occurred. Please contact support.",
+                "message": f"Server error: {type(exc).__name__}: {str(exc)}",
+                "detail": str(exc),
                 "request_id": req_id,
             },
             headers=headers,

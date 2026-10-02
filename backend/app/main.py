@@ -109,6 +109,16 @@ async def health_check() -> HealthResponse:
 
 
 @app.get(
+    "/version",
+    summary="Version Check",
+    tags=["System"],
+)
+def version_check() -> dict[str, str]:
+    """Return backend deployment version and persistence engine."""
+    return {"version": "v1.0.2-50e1b23", "engine": settings.PERSISTENCE_ENGINE}
+
+
+@app.get(
     "/ready",
     response_model=ReadinessResponse,
     response_model_exclude_none=True,
