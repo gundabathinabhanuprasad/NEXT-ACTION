@@ -1,7 +1,7 @@
 """MongoDB Follow-Up Service implementation using embedded task subdocuments."""
 
-from datetime import datetime
-from typing import Any, List, Optional, Union
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Union
 import uuid
 
 from app.documents.common import utcnow
@@ -68,6 +68,62 @@ class MongoFollowUpService:
         if not task:
             raise TaskNotFoundError(task_id)
         return [FollowUpSubDocument.model_validate(f) for f in task.get("follow_ups", [])]
+
+    def list_due_follow_ups(
+        self,
+        db: Any = None,
+        as_of: Optional[datetime] = None,
+    ) -> List[FollowUpSubDocument]:
+        """List uncompleted follow-ups scheduled on or before as_of across all tasks."""
+        target_time = as_of or datetime.now(timezone.utc)
+        tasks = self.task_repo.collection.find(
+            {"follow_ups": {"$elemMatch": {"completed_at": None, "scheduled_at": {"$lte": target_time}}}}
+        )
+        due: List[FollowUpSubDocument] = []
+        for t in tasks:
+            for fu in t.get("follow_ups", []):
+                if fu.get("completed_at") is None and fu.get("scheduled_at") and fu["scheduled_at"] <= target_time:
+                    due.append(FollowUpSubDocument.model_validate(fu))
+        due.sort(key=lambda x: x.scheduled_at or datetime.min.replace(tzinfo=timezone.utc))
+        return due
+
+    def list_follow_ups(
+        self,
+        db: Any = None,
+        task_id: Optional[Union[str, uuid.UUID]] = None,
+        is_completed: Optional[bool] = None,
+    ) -> List[FollowUpSubDocument]:
+        """List follow-ups filtered by task and completion status."""
+        if task_id is not None:
+            task = self.task_repo.get_by_id(task_id)
+            if not task:
+                return []
+            follow_ups = [FollowUpSubDocument.model_validate(fu) for fu in task.get("follow_ups", [])]
+            if is_completed is True:
+                follow_ups = [fu for fu in follow_ups if fu.completed_at is not None]
+            elif is_completed is False:
+                follow_ups = [fu for fu in follow_ups if fu.completed_at is None]
+            follow_ups.sort(key=lambda x: x.scheduled_at or datetime.min.replace(tzinfo=timezone.utc))
+            return follow_ups
+
+        query: Dict[str, Any] = {}
+        if is_completed is True:
+            query = {"follow_ups.completed_at": {"$ne": None}}
+        elif is_completed is False:
+            query = {"follow_ups.completed_at": None}
+
+        tasks = self.task_repo.collection.find(query)
+        res: List[FollowUpSubDocument] = []
+        for t in tasks:
+            for fu in t.get("follow_ups", []):
+                if is_completed is True and fu.get("completed_at") is not None:
+                    res.append(FollowUpSubDocument.model_validate(fu))
+                elif is_completed is False and fu.get("completed_at") is None:
+                    res.append(FollowUpSubDocument.model_validate(fu))
+                elif is_completed is None:
+                    res.append(FollowUpSubDocument.model_validate(fu))
+        res.sort(key=lambda x: x.scheduled_at or datetime.min.replace(tzinfo=timezone.utc))
+        return res
 
     def complete_follow_up(
         self,

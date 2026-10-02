@@ -592,7 +592,19 @@ def test_mongo_embedded_reminders_and_follow_ups(mongo_services):
     assert len(re_fetched.follow_ups) == 1
     assert re_fetched.attempt_count == 0
 
-    # 5. Complete follow-up
+    # 5. List follow-ups and due follow-ups
+    all_fus = follow_up_svc.list_follow_ups()
+    assert len(all_fus) >= 1
+    assert any(fu.id == follow_up.id for fu in all_fus)
+
+    task_fus = follow_up_svc.list_follow_ups(task_id=task.id)
+    assert len(task_fus) == 1
+    assert task_fus[0].id == follow_up.id
+
+    pending_fus = follow_up_svc.list_follow_ups(is_completed=False)
+    assert any(fu.id == follow_up.id for fu in pending_fus)
+
+    # 6. Complete follow-up
     completed_fu = follow_up_svc.complete_follow_up(
         follow_up_id=follow_up.id,
         notes="Stakeholder aligned",
@@ -600,7 +612,10 @@ def test_mongo_embedded_reminders_and_follow_ups(mongo_services):
     assert completed_fu.completed_at is not None
     assert completed_fu.notes == "Stakeholder aligned"
 
-    # 6. Delete follow-up
+    completed_fus = follow_up_svc.list_follow_ups(is_completed=True)
+    assert any(fu.id == follow_up.id for fu in completed_fus)
+
+    # 7. Delete follow-up
     follow_up_svc.delete_follow_up(follow_up_id=follow_up.id)
     re_fetched = task_svc.get_task(task_id=task.id)
     assert len(re_fetched.follow_ups) == 0
