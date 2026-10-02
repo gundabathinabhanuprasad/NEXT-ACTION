@@ -25,11 +25,11 @@ class FollowUpResponse(BaseModel):
     """Schema representing a FollowUp."""
 
     id: uuid.UUID
-    task_id: uuid.UUID
+    task_id: Optional[uuid.UUID] = None
     scheduled_at: datetime
     completed_at: Optional[datetime] = None
     notes: Optional[str] = None
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)

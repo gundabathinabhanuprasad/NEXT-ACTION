@@ -102,50 +102,60 @@ def _http_status_to_error_code(status_code: int) -> str:
     return mapping.get(status_code, f"HTTP_{status_code}")
 
 
+def _build_response_headers(request: Request) -> dict[str, str]:
+    headers = {}
+    req_id = getattr(request.state, "request_id", "") or get_request_id()
+    if req_id:
+        headers["X-Request-ID"] = req_id
+    origin = request.headers.get("origin")
+    if origin and ("pages.dev" in origin or "localhost" in origin or "127.0.0.1" in origin):
+        headers["Access-Control-Allow-Origin"] = origin
+        headers["Access-Control-Allow-Credentials"] = "true"
+        headers["Vary"] = "Origin"
+    return headers
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """Register domain and global exception handlers on the FastAPI application."""
 
     @app.exception_handler(NextActionDomainError)
     async def domain_exception_handler(request: Request, exc: NextActionDomainError) -> JSONResponse:
         status_code, error_code = EXCEPTION_MAPPING.get(type(exc), (400, "DOMAIN_ERROR"))
-        req_id = getattr(request.state, "request_id", "") or get_request_id()
-        headers = {"X-Request-ID": req_id} if req_id else {}
+        headers = _build_response_headers(request)
         return JSONResponse(
             status_code=status_code,
             content={
                 "error": error_code,
                 "message": exc.message,
-                "request_id": req_id,
+                "request_id": headers.get("X-Request-ID", ""),
             },
             headers=headers,
         )
 
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        req_id = getattr(request.state, "request_id", "") or get_request_id()
-        headers = {"X-Request-ID": req_id} if req_id else {}
+        headers = _build_response_headers(request)
         return JSONResponse(
             status_code=422,
             content={
                 "error": "VALIDATION_ERROR",
                 "message": "Invalid request parameters.",
                 "detail": jsonable_encoder(exc.errors()),
-                "request_id": req_id,
+                "request_id": headers.get("X-Request-ID", ""),
             },
             headers=headers,
         )
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
-        req_id = getattr(request.state, "request_id", "") or get_request_id()
-        headers = {"X-Request-ID": req_id} if req_id else {}
+        headers = _build_response_headers(request)
         return JSONResponse(
             status_code=exc.status_code,
             content={
                 "error": _http_status_to_error_code(exc.status_code),
                 "message": str(exc.detail),
                 "detail": jsonable_encoder(exc.detail),
-                "request_id": req_id,
+                "request_id": headers.get("X-Request-ID", ""),
             },
             headers=headers,
         )
@@ -153,8 +163,8 @@ def register_exception_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        req_id = getattr(request.state, "request_id", "") or get_request_id()
-        headers = {"X-Request-ID": req_id} if req_id else {}
+        headers = _build_response_headers(request)
+        req_id = headers.get("X-Request-ID", "")
         # Detailed traceback is logged to server logs; NEVER exposed to the client
         logger.exception(
             f"Unhandled server exception on {request.method} {request.url.path} [req_id={req_id}]: {exc}"
