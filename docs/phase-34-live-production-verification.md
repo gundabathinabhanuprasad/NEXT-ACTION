@@ -122,6 +122,52 @@ Access-Control-Allow-Methods: DELETE, GET, HEAD, OPTIONS, PATCH, POST, PUT, QUER
 
 ---
 
-## 5. Final Status
+## 5. Public Android APK Distribution & Verification
 
-**LIVE PRODUCTION VERIFICATION: PASS**
+### A. Local APK Inspection
+- **Path**: `apps/mobile_web/build/app/outputs/flutter-apk/app-release.apk`
+- **Build Status**: Verified legitimate release APK (`--release` build mode)
+- **Embedded Production Backend**: `https://nextaction-backend-jkrp.onrender.com`
+- **File Size**: `54,410,263` bytes (~51.89 MB)
+- **SHA-256 Checksum**: `97C23DD1556B3D151CD3C75BE75E29797587EFF27E080365910C4BED2704F266`
+- **Web Artifact Guardrail**: Excluded from `apps/mobile_web/build/web/` (0 APK files inside web bundle, respecting Cloudflare Pages 25 MiB file ceiling)
+
+### B. GitHub Release Publication
+- **Repository**: [https://github.com/gundabathinabhanuprasad/NEXT-ACTION](https://github.com/gundabathinabhanuprasad/NEXT-ACTION)
+- **Repository Visibility**: `public`
+- **Release Tag**: `v1.0.0`
+- **Release Name**: `NextAction v1.0.0 — Production Android Release`
+- **Release URL**: [https://github.com/gundabathinabhanuprasad/NEXT-ACTION/releases/tag/v1.0.0](https://github.com/gundabathinabhanuprasad/NEXT-ACTION/releases/tag/v1.0.0)
+- **Uploaded Asset Name**: `app-release.apk`
+- **Uploaded Asset ID**: `604809054`
+- **Public Download URL**: [https://github.com/gundabathinabhanuprasad/NEXT-ACTION/releases/download/v1.0.0/app-release.apk](https://github.com/gundabathinabhanuprasad/NEXT-ACTION/releases/download/v1.0.0/app-release.apk)
+
+### C. Public Download & Asset Integrity Verification
+- **HTTP HEAD Probe**:
+  - Direct URL: `https://github.com/gundabathinabhanuprasad/NEXT-ACTION/releases/download/v1.0.0/app-release.apk`
+  - Storage Redirect: Azure Blob Storage (`release-assets.githubusercontent.com`)
+  - HTTP Status: `200 OK`
+  - Content-Type: `application/vnd.android.package-archive`
+  - Content-Length: `54410263` bytes
+- **End-to-End Download Test**:
+  - Downloaded bytes: `54,410,263` bytes (100% match)
+  - Calculated SHA-256: `97C23DD1556B3D151CD3C75BE75E29797587EFF27E080365910C4BED2704F266`
+  - Integrity Verification: **PASS** (Exact SHA-256 match with locally compiled release APK)
+
+### D. Download Portal Update & Cloudflare Redeployment
+- **Portal Source**: `apps/mobile_web/web/download.html` (line 289)
+- **Updated Anchor**: Points directly to public release asset `https://github.com/gundabathinabhanuprasad/NEXT-ACTION/releases/download/v1.0.0/app-release.apk`
+- **Cloudflare Pages Redeployment**:
+  - Command: `npx wrangler pages deploy apps/mobile_web/build/web --project-name=nextaction --branch=production`
+  - Deployment ID: `d4c34d27`
+  - Canonical URL Verified: [https://nextaction.pages.dev/download.html](https://nextaction.pages.dev/download.html) (HTTP 200 OK, confirmed new APK asset link present)
+  - Root Web URL: [https://nextaction.pages.dev](https://nextaction.pages.dev) (HTTP 200 OK)
+
+### E. Shorebird CodePush Status
+- **Status**: **NOT STARTED** (Intentionally deferred per task boundary)
+
+---
+
+## 6. Final Status
+
+**LIVE PRODUCTION & ANDROID DISTRIBUTION VERIFICATION: ALL PASS**
