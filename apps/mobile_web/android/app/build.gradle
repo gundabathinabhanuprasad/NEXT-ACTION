@@ -1,0 +1,80 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+}
+
+def localProperties = new Properties()
+def localPropertiesFile = rootProject.file("local.properties")
+if (localPropertiesFile.exists()) {
+    localPropertiesFile.withReader("UTF-8") { reader ->
+        localProperties.load(reader)
+    }
+}
+
+def flutterVersionCode = localProperties.getProperty("flutter.versionCode")
+if (flutterVersionCode == null) {
+    flutterVersionCode = "1"
+}
+
+def flutterVersionName = localProperties.getProperty("flutter.versionName")
+if (flutterVersionName == null) {
+    flutterVersionName = "1.0"
+}
+
+android {
+    namespace = "com.nextaction.nextaction"
+    compileSdk = 34
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    defaultConfig {
+        applicationId = "com.nextaction.nextaction"
+        minSdk = 23
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutterVersionCode.toInteger()
+        versionName = flutterVersionName
+    }
+
+    signingConfigs {
+        release {
+            def keystorePropertiesFile = rootProject.file("key.properties")
+            if (keystorePropertiesFile.exists()) {
+                def keystoreProperties = new Properties()
+                keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+                storeFile keystoreProperties['storeFile'] ? file(keystoreProperties['storeFile']) : null
+                storePassword keystoreProperties['storePassword']
+            } else if (System.getenv("ANDROID_KEYSTORE_PATH") != null) {
+                keyAlias System.getenv("ANDROID_KEY_ALIAS")
+                keyPassword System.getenv("ANDROID_KEY_PASSWORD")
+                storeFile file(System.getenv("ANDROID_KEYSTORE_PATH"))
+                storePassword System.getenv("ANDROID_KEYSTORE_PASSWORD")
+            } else {
+                // Safe fallback to debug signing for local test release builds
+                keyAlias signingConfigs.debug.keyAlias
+                keyPassword signingConfigs.debug.keyPassword
+                storeFile signingConfigs.debug.storeFile
+                storePassword signingConfigs.debug.storePassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            signingConfig = signingConfigs.release
+            minifyEnabled false
+            shrinkResources false
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}

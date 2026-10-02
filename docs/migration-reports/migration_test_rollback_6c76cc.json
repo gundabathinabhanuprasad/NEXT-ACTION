@@ -1,0 +1,56 @@
+{
+  "migration_id": "test_rollback_6c76cc",
+  "mode": "migrate",
+  "status": "failed",
+  "start_time": "2026-09-30T16:39:24.471198+00:00",
+  "end_time": "2026-09-30T16:39:30.249805+00:00",
+  "source_database": "postgresql",
+  "destination_database": "mongodb",
+  "source_counts": {
+    "users": 8911,
+    "user_settings": 426,
+    "clients": 2029,
+    "workflows": 1759,
+    "task_templates": 177,
+    "recurring_tasks": 44,
+    "tasks": 9639,
+    "task_history": 13840,
+    "recurring_task_executions": 48,
+    "notifications": 8353,
+    "events": 95,
+    "refresh_tokens": 970
+  },
+  "destination_counts_before": {
+    "users": 0,
+    "user_settings": 0,
+    "clients": 0,
+    "workflows": 0,
+    "task_templates": 0,
+    "recurring_tasks": 0,
+    "tasks": 0,
+    "task_history": 0,
+    "recurring_task_executions": 0,
+    "notifications": 0,
+    "events": 0,
+    "refresh_tokens": 0
+  },
+  "destination_counts_after": {},
+  "inserted": {},
+  "updated": {},
+  "skipped": {},
+  "invalid": {},
+  "failed": {},
+  "count_comparison": null,
+  "task_distributions": null,
+  "checksum_mismatches": [],
+  "relationship_errors": [],
+  "errors": [
+    {
+      "entity": "system",
+      "entity_id": null,
+      "field": null,
+      "message": "Migration execution error: 'MongoDBLoader' object has no attribute 'mongo_db'",
+      "timestamp": "2026-09-30 16:39:30.249822+00:00"
+    }
+  ]
+}

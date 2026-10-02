@@ -1,0 +1,56 @@
+{
+  "migration_id": "mig_20260930_163824_3e63e0",
+  "mode": "migrate",
+  "status": "failed",
+  "start_time": "2026-09-30T16:38:24.597952+00:00",
+  "end_time": "2026-09-30T16:38:30.116428+00:00",
+  "source_database": "postgresql",
+  "destination_database": "mongodb",
+  "source_counts": {
+    "users": 8895,
+    "user_settings": 418,
+    "clients": 2021,
+    "workflows": 1751,
+    "task_templates": 169,
+    "recurring_tasks": 36,
+    "tasks": 9623,
+    "task_history": 13832,
+    "recurring_task_executions": 40,
+    "notifications": 8345,
+    "events": 87,
+    "refresh_tokens": 962
+  },
+  "destination_counts_before": {
+    "users": 0,
+    "user_settings": 0,
+    "clients": 0,
+    "workflows": 0,
+    "task_templates": 0,
+    "recurring_tasks": 0,
+    "tasks": 0,
+    "task_history": 0,
+    "recurring_task_executions": 0,
+    "notifications": 0,
+    "events": 0,
+    "refresh_tokens": 0
+  },
+  "destination_counts_after": {},
+  "inserted": {},
+  "updated": {},
+  "skipped": {},
+  "invalid": {},
+  "failed": {},
+  "count_comparison": null,
+  "task_distributions": null,
+  "checksum_mismatches": [],
+  "relationship_errors": [],
+  "errors": [
+    {
+      "entity": "system",
+      "entity_id": null,
+      "field": null,
+      "message": "Migration execution error: name 'errors' is not defined",
+      "timestamp": "2026-09-30 16:38:30.116446+00:00"
+    }
+  ]
+}

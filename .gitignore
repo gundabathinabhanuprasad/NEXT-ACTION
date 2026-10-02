@@ -1,0 +1,145 @@
+# ==========================================
+# NextAction - Comprehensive .gitignore
+# ==========================================
+
+# Operating System Files
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+/lib/
+/lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Python Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+env.bak/
+venv.bak/
+backend/.venv/
+backend/venv/
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+htmlcov/
+
+# Static Type Checking / Linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+.ruff_cache/
+
+# FastAPI / Database / Local Data
+*.sqlite
+*.sqlite3
+*.db
+.env
+.env.*
+**/.env
+**/.env.*
+!.env.example
+!**/.env.example
+*.log
+
+# Docker / Postgres data
+postgres_data/
+docker_data/
+nginx/ssl/*.pem
+nginx/ssl/*.key
+nginx/ssl/*.crt
+
+# Dart & Flutter
+!apps/**/lib/
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+pubspec.lock
+
+# Flutter build artifacts
+**/build/
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/ios/.symlinks/
+**/ios/Pods/
+**/ios/Podfile.lock
+**/ios/.symlinks/
+**/macos/Pods/
+**/macos/Podfile.lock
+**/ephemeral/
+*.flutter-plugins
+*.flutter-plugins-dependencies
+
+# IDEs & Editors
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Antigravity & AI Agent directories
+.gemini/
+.agents/
+.planning/
+
+# Cloudflare Wrangler cache & temp
+.wrangler/

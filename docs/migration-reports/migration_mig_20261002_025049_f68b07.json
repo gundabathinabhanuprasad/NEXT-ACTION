@@ -1,0 +1,214 @@
+{
+  "migration_id": "mig_20261002_025049_f68b07",
+  "mode": "migrate",
+  "status": "completed",
+  "start_time": "2026-10-02T02:50:49.855964+00:00",
+  "end_time": "2026-10-02T02:51:05.787677+00:00",
+  "source_database": "postgresql",
+  "destination_database": "mongodb",
+  "source_counts": {
+    "users": 10486,
+    "user_settings": 587,
+    "clients": 2444,
+    "workflows": 2123,
+    "task_templates": 282,
+    "recurring_tasks": 20,
+    "tasks": 11300,
+    "task_history": 15898,
+    "recurring_task_executions": 19,
+    "notifications": 10900,
+    "events": 178,
+    "refresh_tokens": 1567
+  },
+  "destination_counts_before": {
+    "users": 0,
+    "user_settings": 0,
+    "clients": 0,
+    "workflows": 0,
+    "task_templates": 0,
+    "recurring_tasks": 0,
+    "tasks": 0,
+    "task_history": 0,
+    "recurring_task_executions": 0,
+    "notifications": 0,
+    "events": 0,
+    "refresh_tokens": 0
+  },
+  "destination_counts_after": {
+    "users": 10486,
+    "user_settings": 587,
+    "clients": 2444,
+    "workflows": 2123,
+    "task_templates": 282,
+    "recurring_tasks": 20,
+    "tasks": 11300,
+    "task_history": 15898,
+    "recurring_task_executions": 19,
+    "notifications": 10900,
+    "events": 178,
+    "refresh_tokens": 1567
+  },
+  "inserted": {
+    "users": 10486,
+    "user_settings": 587,
+    "clients": 2444,
+    "workflows": 2123,
+    "task_templates": 282,
+    "recurring_tasks": 20,
+    "tasks": 11300,
+    "task_history": 15898,
+    "recurring_task_executions": 19,
+    "notifications": 10900,
+    "events": 178,
+    "refresh_tokens": 1567
+  },
+  "updated": {
+    "users": 0,
+    "user_settings": 0,
+    "clients": 0,
+    "workflows": 0,
+    "task_templates": 0,
+    "recurring_tasks": 0,
+    "tasks": 0,
+    "task_history": 0,
+    "recurring_task_executions": 0,
+    "notifications": 0,
+    "events": 0,
+    "refresh_tokens": 0
+  },
+  "skipped": {},
+  "invalid": {},
+  "failed": {
+    "users": 0,
+    "user_settings": 0,
+    "clients": 0,
+    "workflows": 0,
+    "task_templates": 0,
+    "recurring_tasks": 0,
+    "tasks": 0,
+    "task_history": 0,
+    "recurring_task_executions": 0,
+    "notifications": 0,
+    "events": 0,
+    "refresh_tokens": 0
+  },
+  "count_comparison": {
+    "users": {
+      "postgresql": 10486,
+      "mongodb": 10486,
+      "difference": 0,
+      "match": true
+    },
+    "user_settings": {
+      "postgresql": 587,
+      "mongodb": 587,
+      "difference": 0,
+      "match": true
+    },
+    "clients": {
+      "postgresql": 2444,
+      "mongodb": 2444,
+      "difference": 0,
+      "match": true
+    },
+    "workflows": {
+      "postgresql": 2123,
+      "mongodb": 2123,
+      "difference": 0,
+      "match": true
+    },
+    "task_templates": {
+      "postgresql": 282,
+      "mongodb": 282,
+      "difference": 0,
+      "match": true
+    },
+    "recurring_tasks": {
+      "postgresql": 20,
+      "mongodb": 20,
+      "difference": 0,
+      "match": true
+    },
+    "tasks": {
+      "postgresql": 11300,
+      "mongodb": 11300,
+      "difference": 0,
+      "match": true
+    },
+    "task_history": {
+      "postgresql": 15898,
+      "mongodb": 15898,
+      "difference": 0,
+      "match": true
+    },
+    "recurring_task_executions": {
+      "postgresql": 19,
+      "mongodb": 19,
+      "difference": 0,
+      "match": true
+    },
+    "notifications": {
+      "postgresql": 10900,
+      "mongodb": 10900,
+      "difference": 0,
+      "match": true
+    },
+    "events": {
+      "postgresql": 178,
+      "mongodb": 178,
+      "difference": 0,
+      "match": true
+    },
+    "refresh_tokens": {
+      "postgresql": 1567,
+      "mongodb": 1567,
+      "difference": 0,
+      "match": true
+    }
+  },
+  "task_distributions": {
+    "status_distribution": {
+      "postgresql": {
+        "pending": 8409,
+        "in_progress": 1401,
+        "completed": 1030,
+        "cancelled": 460
+      },
+      "mongodb": {
+        "pending": 8409,
+        "completed": 1030,
+        "cancelled": 460,
+        "in_progress": 1401
+      },
+      "match": true
+    },
+    "priority_distribution": {
+      "postgresql": {
+        "medium": 6817,
+        "high": 1409,
+        "urgent": 1528,
+        "low": 1546
+      },
+      "mongodb": {
+        "urgent": 1528,
+        "low": 1546,
+        "high": 1409,
+        "medium": 6817
+      },
+      "match": true
+    },
+    "total_attempts": {
+      "postgresql": 5067,
+      "mongodb": 5067,
+      "match": true
+    },
+    "completed_count": {
+      "postgresql": 1030,
+      "mongodb": 1030,
+      "match": true
+    }
+  },
+  "checksum_mismatches": [],
+  "relationship_errors": [],
+  "errors": []
+}

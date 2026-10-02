@@ -1,0 +1,4 @@
+# Cloudflare Pages SPA Routing Rule
+# Serves index.html with 200 OK status for all single-page application paths
+# while allowing static files (download.html, apk, icons, js) to serve directly.
+/*    /index.html   200

@@ -1,0 +1,8 @@
+# Android Release Signing Configuration Example
+# Copy this file to 'key.properties' in android/ or mobile_web/ root for local release signing.
+# DO NOT commit the actual key.properties or .jks keystore to Git!
+
+storePassword=your_keystore_password
+keyPassword=your_key_password
+keyAlias=your_key_alias
+storeFile=../keystores/release.keystore

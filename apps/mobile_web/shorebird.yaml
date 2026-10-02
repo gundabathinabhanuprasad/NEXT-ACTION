@@ -1,0 +1,4 @@
+# This file is used by Shorebird to configure your project.
+# For more information, see: https://docs.shorebird.dev
+app_id: 8b73d2a4-4a29-45d6-b183-fcf102d184a2
+auto_update: true
