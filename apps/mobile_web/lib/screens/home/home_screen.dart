@@ -147,12 +147,12 @@ class _HomeScreenState extends State<HomeScreen> {
       // 2. Concurrently fetch complementary entities for list previews and organization tabs
       final results = await Future.wait([
         widget.taskService.getTasks(page: 1, pageSize: 100),
-        _followUpService.getFollowUps(),
-        _reminderService.getReminders(),
-        widget.taskService.getRecentActivity(limit: 15),
-        _clientService.getClients(pageSize: 1),
-        _workflowService.getWorkflows(isActive: true, pageSize: 1),
-        _userService.getUsers(isActive: true, pageSize: 1),
+        _followUpService.getFollowUps().catchError((_) => <FollowUp>[]),
+        _reminderService.getReminders().catchError((_) => <Reminder>[]),
+        widget.taskService.getRecentActivity(limit: 15).catchError((_) => <TaskHistory>[]),
+        _clientService.getClients(pageSize: 1).catchError((_) => const ClientListResponse(items: [], total: 0, page: 1, pageSize: 1)),
+        _workflowService.getWorkflows(isActive: true, pageSize: 1).catchError((_) => const WorkflowListResponse(items: [], total: 0, page: 1, pageSize: 1)),
+        _userService.getUsers(isActive: true, pageSize: 1).catchError((_) => const UserListResponse(items: [], total: 0, page: 1, pageSize: 1)),
         _notificationService
             .getNotifications(unreadOnly: false, page: 1, pageSize: 5)
             .catchError((_) => const NotificationListResponse(items: [], total: 0, unreadCount: 0, page: 1, pageSize: 5)),
