@@ -50,6 +50,8 @@ services:
         value: "15"
       - key: REFRESH_TOKEN_EXPIRE_DAYS
         value: "7"
+      - key: GOOGLE_CLIENT_ID
+        value: 961913451597-ft3u2q5vo79m5tv6i58ia69o89p5nm34.apps.googleusercontent.com
 
       # Rate Limiting Guardrails
       - key: RATE_LIMIT_ENABLED
