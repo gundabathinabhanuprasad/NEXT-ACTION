@@ -36,11 +36,7 @@ class ApiConfig {
 
     if (kIsWeb) {
       if (kReleaseMode) {
-        // In production web release mode, use the browser origin to avoid localhost fallback
-        final origin = Uri.base.origin;
-        if (origin.isNotEmpty && origin != 'null') {
-          return origin;
-        }
+        return 'https://nextaction-backend-jkrp.onrender.com';
       }
       // Flutter Web development host
       return 'http://127.0.0.1:$defaultPort';
