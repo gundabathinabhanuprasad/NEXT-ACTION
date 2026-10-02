@@ -145,6 +145,7 @@ def init_mongo_indexes(db: Database) -> None:
         # Users
         db["users"].create_indexes([
             IndexModel([("email", ASCENDING)], unique=True, name="idx_users_email_unique"),
+            IndexModel([("google_id", ASCENDING)], name="idx_users_google_id", sparse=True),
             IndexModel([("is_active", ASCENDING)], name="idx_users_is_active"),
             IndexModel([("created_at", DESCENDING)], name="idx_users_created_at"),
         ])

@@ -101,7 +101,23 @@ class Settings(BaseSettings):
     # Controlled Dual-Write Scaffolding (Phase 31)
     MONGODB_DUAL_WRITE_ENABLED: bool = False
 
-    @field_validator("CORS_ORIGINS", "TRUSTED_HOSTS", mode="before")
+    # Google OAuth Configuration
+    GOOGLE_CLIENT_ID: Optional[str] = None
+    GOOGLE_CLIENT_IDS: Union[list[str], str] = []
+
+    def get_google_client_ids(self) -> list[str]:
+        """Return unified list of authorized Google OAuth Client IDs."""
+        ids: list[str] = []
+        if self.GOOGLE_CLIENT_ID and self.GOOGLE_CLIENT_ID.strip():
+            ids.append(self.GOOGLE_CLIENT_ID.strip())
+        if isinstance(self.GOOGLE_CLIENT_IDS, list):
+            for item in self.GOOGLE_CLIENT_IDS:
+                cleaned = str(item).strip()
+                if cleaned and cleaned not in ids:
+                    ids.append(cleaned)
+        return ids
+
+    @field_validator("CORS_ORIGINS", "TRUSTED_HOSTS", "GOOGLE_CLIENT_IDS", mode="before")
     @classmethod
     def parse_string_list(cls, v: Any) -> list[str]:
         """Parse list of strings from JSON list, Python list, or comma-separated string."""

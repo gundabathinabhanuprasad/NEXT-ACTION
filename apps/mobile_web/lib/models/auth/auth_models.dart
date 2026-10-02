@@ -5,6 +5,8 @@ class User {
   final String name;
   final String email;
   final bool isActive;
+  final String? googleId;
+  final String authProvider;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -13,6 +15,8 @@ class User {
     required this.name,
     required this.email,
     required this.isActive,
+    this.googleId,
+    this.authProvider = 'local',
     required this.createdAt,
     required this.updatedAt,
   });
@@ -23,6 +27,8 @@ class User {
       name: json['name'] as String,
       email: json['email'] as String,
       isActive: json['is_active'] as bool? ?? true,
+      googleId: json['google_id'] as String?,
+      authProvider: json['auth_provider'] as String? ?? 'local',
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -33,8 +39,20 @@ class User {
         'name': name,
         'email': email,
         'is_active': isActive,
+        if (googleId != null) 'google_id': googleId,
+        'auth_provider': authProvider,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
+      };
+}
+
+class GoogleLoginRequest {
+  final String idToken;
+
+  const GoogleLoginRequest({required this.idToken});
+
+  Map<String, dynamic> toJson() => {
+        'id_token': idToken,
       };
 }
 

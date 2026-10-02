@@ -12,6 +12,8 @@ class UserDocument(BaseDocument):
     email: str = Field(min_length=3, max_length=255)
     password_hash: str = Field(default="", max_length=255)
     is_active: bool = Field(default=True)
+    google_id: Optional[str] = Field(default=None, max_length=255)
+    auth_provider: str = Field(default="local", max_length=50)
 
     @field_validator("email")
     @classmethod

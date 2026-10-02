@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +17,8 @@ import 'package:nextaction/screens/tasks/task_detail_screen.dart';
 import 'package:nextaction/screens/tasks/task_list_screen.dart';
 import 'package:nextaction/services/auth/auth_service.dart';
 import 'package:nextaction/services/task/task_service.dart';
+import 'package:nextaction/widgets/common_widgets.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class InMemoryTokenStorage implements TokenStorage {
   String? token;
@@ -29,6 +32,94 @@ class InMemoryTokenStorage implements TokenStorage {
   Future<void> deleteToken() async => token = null;
   @override
   Future<bool> hasToken() async => token != null && token!.isNotEmpty;
+}
+
+class FakeGoogleSignInAuthentication implements GoogleSignInAuthentication {
+  @override
+  final String? accessToken;
+  @override
+  final String? idToken;
+  @override
+  final String? serverAuthCode;
+
+  FakeGoogleSignInAuthentication({
+    this.accessToken = 'mock_google_access_token',
+    this.idToken = 'mock_google_id_token',
+    this.serverAuthCode,
+  });
+}
+
+class FakeGoogleSignInAccount implements GoogleSignInAccount {
+  @override
+  final String email;
+  @override
+  final String id;
+  @override
+  final String displayName;
+  @override
+  final String? photoUrl;
+  @override
+  final String? serverAuthCode;
+  final String? _mockIdToken;
+
+  FakeGoogleSignInAccount({
+    required this.email,
+    required this.id,
+    required this.displayName,
+    this.photoUrl,
+    this.serverAuthCode,
+    String? mockIdToken,
+  }) : _mockIdToken = mockIdToken;
+
+  @override
+  Future<GoogleSignInAuthentication> get authentication async =>
+      FakeGoogleSignInAuthentication(idToken: _mockIdToken);
+
+  @override
+  Future<Map<String, String>> get authHeaders async => {};
+
+  @override
+  Future<void> clearAuthCache() async {}
+}
+
+class FakeGoogleSignIn implements GoogleSignIn {
+  final GoogleSignInAccount? accountToReturn;
+  final bool shouldThrow;
+  bool signedOutCalled = false;
+  bool _isSignedIn = false;
+
+  FakeGoogleSignIn({
+    this.accountToReturn,
+    this.shouldThrow = false,
+    bool initiallySignedIn = false,
+  }) : _isSignedIn = initiallySignedIn;
+
+  @override
+  Future<GoogleSignInAccount?> signIn() async {
+    if (shouldThrow) {
+      throw Exception('Simulated Google Sign-In exception');
+    }
+    if (accountToReturn != null) {
+      _isSignedIn = true;
+    }
+    return accountToReturn;
+  }
+
+  @override
+  Future<bool> isSignedIn() async => _isSignedIn;
+
+  @override
+  Future<GoogleSignInAccount?> signOut() async {
+    signedOutCalled = true;
+    _isSignedIn = false;
+    return null;
+  }
+
+  @override
+  Future<GoogleSignInAccount?> disconnect() async => null;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
@@ -54,7 +145,77 @@ void main() {
 
     expect(find.text('NextAction'), findsOneWidget);
     expect(find.text('Sign In'), findsOneWidget);
+    expect(find.text('Continue with Google'), findsOneWidget);
     expect(find.byType(LoginScreen), findsOneWidget);
+  });
+
+  testWidgets('initial load with network timeout renders clean LoginScreen without red error banner', (WidgetTester tester) async {
+    final tokenStorage = InMemoryTokenStorage('stale_or_existing_token');
+    final mockClient = MockClient((_) async {
+      throw TimeoutException('Request timed out while backend waking');
+    });
+    final apiClient = ApiClient(
+      httpClient: mockClient,
+      tokenStorage: tokenStorage,
+    );
+    final authService = AuthService(apiClient: apiClient);
+    final authProvider = AuthProvider(authService: authService);
+    final taskService = TaskService(apiClient: apiClient);
+
+    await authProvider.checkAuthStatus();
+    expect(authProvider.errorMessage, isNull);
+    expect(authProvider.status, equals(AuthStatus.unauthenticated));
+
+    await tester.pumpWidget(
+      NextActionApp(
+        authProvider: authProvider,
+        taskService: taskService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.text('NextAction'), findsOneWidget);
+    expect(find.text('Sign In'), findsOneWidget);
+    expect(find.byType(ErrorBanner), findsNothing);
+    expect(find.text('Request timed out. Please verify your connection.'), findsNothing);
+  });
+
+  testWidgets('submitting login form with network timeout displays error banner for user feedback', (WidgetTester tester) async {
+    final tokenStorage = InMemoryTokenStorage();
+    final mockClient = MockClient((_) async {
+      throw TimeoutException('Connection timed out');
+    });
+    final apiClient = ApiClient(
+      httpClient: mockClient,
+      tokenStorage: tokenStorage,
+    );
+    final authService = AuthService(apiClient: apiClient);
+    final authProvider = AuthProvider(authService: authService);
+    final taskService = TaskService(apiClient: apiClient);
+
+    await authProvider.checkAuthStatus();
+
+    await tester.pumpWidget(
+      NextActionApp(
+        authProvider: authProvider,
+        taskService: taskService,
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Verify initially clean without error banner
+    expect(find.byType(ErrorBanner), findsNothing);
+
+    // Enter credentials and tap Sign In
+    await tester.enterText(find.widgetWithText(TextFormField, 'Email Address'), 'user@example.com');
+    await tester.enterText(find.widgetWithText(TextFormField, 'Password'), 'password123');
+    await tester.tap(find.widgetWithText(FilledButton, 'Sign In'));
+    await tester.pumpAndSettle();
+
+    // Verify error banner is now displayed in response to user action
+    expect(find.byType(ErrorBanner), findsOneWidget);
+    expect(find.text('Request timed out. Please verify your connection.'), findsOneWidget);
   });
 
   testWidgets('renders HomeScreen when authenticated', (WidgetTester tester) async {
@@ -556,5 +717,75 @@ void main() {
     expect(find.text('Follow-ups (1)'), findsOneWidget);
     expect(find.text('Check on customer contract'), findsOneWidget);
     expect(find.text('Audit History Timeline (1)'), findsOneWidget);
+  });
+
+  testWidgets('tapping Continue with Google triggers Google Sign-In and handles clean cancellation', (WidgetTester tester) async {
+    final fakeGoogle = FakeGoogleSignIn(accountToReturn: null); // User cancelled dialog
+    final mockClient = MockClient((_) async => http.Response('Unauthorized', 401));
+    final apiClient = ApiClient(httpClient: mockClient, tokenStorage: InMemoryTokenStorage());
+    final authService = AuthService(apiClient: apiClient, googleSignIn: fakeGoogle);
+    final authProvider = AuthProvider(authService: authService);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(authProvider: authProvider),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final googleBtn = find.text('Continue with Google');
+    expect(googleBtn, findsOneWidget);
+
+    // Tap Continue with Google
+    await tester.tap(googleBtn);
+    await tester.pump();
+
+    // Verify clean cancellation does NOT display error banner
+    expect(find.byType(ErrorBanner), findsNothing);
+  });
+
+  testWidgets('Continue with Google displays error banner on genuine authentication failure', (WidgetTester tester) async {
+    final fakeAccount = FakeGoogleSignInAccount(
+      id: 'google_777',
+      email: 'bad@example.com',
+      displayName: 'Bad',
+      mockIdToken: 'bad_token_xyz',
+    );
+    final fakeGoogle = FakeGoogleSignIn(accountToReturn: fakeAccount);
+
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/api/v1/auth/google') {
+        return http.Response(
+          jsonEncode({
+            'error': 'INVALID_CREDENTIALS',
+            'message': 'Google credential token signature invalid',
+          }),
+          401,
+        );
+      }
+      return http.Response('Not Found', 404);
+    });
+
+    final apiClient = ApiClient(httpClient: mockClient, tokenStorage: InMemoryTokenStorage());
+    final authService = AuthService(apiClient: apiClient, googleSignIn: fakeGoogle);
+    final authProvider = AuthProvider(authService: authService);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: LoginScreen(authProvider: authProvider),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final googleBtn = find.text('Continue with Google');
+    expect(googleBtn, findsOneWidget);
+
+    // Tap Continue with Google
+    await tester.tap(googleBtn);
+    await tester.pumpAndSettle();
+
+    // Verify genuine backend rejection error banner is displayed
+    expect(find.byType(ErrorBanner), findsOneWidget);
+    expect(find.textContaining('Google credential token signature invalid'), findsOneWidget);
   });
 }

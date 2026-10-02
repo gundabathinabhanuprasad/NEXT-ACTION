@@ -143,3 +143,6 @@ pubspec.lock
 
 # Cloudflare Wrangler cache & temp
 .wrangler/
+
+# Test generated migration reports
+docs/migration-reports/

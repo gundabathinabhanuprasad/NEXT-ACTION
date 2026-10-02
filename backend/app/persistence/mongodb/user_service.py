@@ -104,6 +104,50 @@ class MongoUserService:
 
         return user
 
+    def authenticate_or_create_google_user(
+        self,
+        db: Any = None,
+        google_id: str = "",
+        email: str = "",
+        name: str = "",
+    ) -> UserDocument:
+        """Authenticate existing Google user, link existing email account, or create new user."""
+        norm_email = email.strip().lower()
+
+        # 1. Lookup by google_id
+        if google_id and google_id.strip():
+            user_dict = self.user_repo.get_by_google_id(google_id.strip())
+            if user_dict:
+                user = self._to_doc(user_dict)
+                if not user.is_active:
+                    raise InactiveUserError(f"User account for '{norm_email}' is inactive.")
+                return user
+
+        # 2. Lookup by email (safe account linking policy)
+        user_dict = self.user_repo.get_by_email(norm_email)
+        if user_dict:
+            user = self._to_doc(user_dict)
+            if not user.is_active:
+                raise InactiveUserError(f"User account for '{norm_email}' is inactive.")
+            if google_id and user.google_id != google_id:
+                self.user_repo.update(user.id, {"google_id": google_id})
+                user.google_id = google_id
+            return user
+
+        # 3. Create new user with verified Google identity
+        display_name = name.strip() if name and name.strip() else norm_email.split("@")[0]
+        user = UserDocument(
+            name=display_name,
+            email=norm_email,
+            password_hash="",
+            google_id=google_id.strip() if google_id else None,
+            auth_provider="google",
+            is_active=True,
+        )
+        saved = self.user_repo.create(user)
+        self.settings_repo.upsert_for_user(user.id, {})
+        return self._to_doc(saved)
+
     def get_user_by_id(
         self,
         db: Any = None,

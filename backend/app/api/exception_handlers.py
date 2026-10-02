@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging_config import get_request_id
+from app.core.google_auth import InvalidGoogleTokenError
 
 from app.services.exceptions import (
     AuthenticationRequiredError,
@@ -62,6 +63,7 @@ EXCEPTION_MAPPING: dict[Type[NextActionDomainError], tuple[int, str]] = {
     UserNotFoundError: (404, "USER_NOT_FOUND"),
     UserAlreadyExistsError: (409, "USER_ALREADY_EXISTS"),
     InvalidCredentialsError: (401, "INVALID_CREDENTIALS"),
+    InvalidGoogleTokenError: (401, "INVALID_CREDENTIALS"),
     InactiveUserError: (401, "INACTIVE_USER"),
     AuthenticationRequiredError: (401, "AUTHENTICATION_REQUIRED"),
     InvalidTokenError: (401, "INVALID_TOKEN"),

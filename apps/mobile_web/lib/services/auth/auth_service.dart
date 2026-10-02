@@ -1,3 +1,7 @@
+import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import '../../core/config/api_config.dart';
+import '../../core/errors/api_exception.dart';
 import '../../core/network/api_client.dart';
 import '../../core/storage/token_storage.dart';
 import '../../models/auth/auth_models.dart';
@@ -5,12 +9,23 @@ import '../../models/auth/auth_models.dart';
 /// Service managing user authentication, registration, session verification, and logout.
 class AuthService {
   final ApiClient _apiClient;
+  final GoogleSignIn? _defaultGoogleSignIn;
 
-  AuthService({ApiClient? apiClient}) : _apiClient = apiClient ?? ApiClient();
+  AuthService({ApiClient? apiClient, GoogleSignIn? googleSignIn})
+      : _apiClient = apiClient ?? ApiClient(),
+        _defaultGoogleSignIn = googleSignIn;
 
   ApiClient get apiClient => _apiClient;
   TokenStorage get tokenStorage => _apiClient.tokenStorage;
   RefreshTokenStorage? get refreshTokenStorage => _apiClient.refreshTokenStorage;
+
+  GoogleSignIn _createGoogleSignIn() {
+    return GoogleSignIn(
+      clientId: kIsWeb && ApiConfig.googleWebClientId.isNotEmpty ? ApiConfig.googleWebClientId : null,
+      serverClientId: ApiConfig.googleServerClientId.isNotEmpty ? ApiConfig.googleServerClientId : null,
+      scopes: const ['email', 'profile'],
+    );
+  }
 
   /// Authenticate with email & password and persist the returned JWT access token.
   Future<TokenResponse> login(String email, String password) async {
@@ -21,6 +36,42 @@ class AuthService {
 
     final response = await _apiClient.post(
       '/auth/login',
+      body: payload.toJson(),
+      requiresAuth: false,
+    );
+
+    final tokenResponse = TokenResponse.fromJson(response as Map<String, dynamic>);
+    await _apiClient.tokenStorage.saveToken(tokenResponse.accessToken);
+    if (tokenResponse.refreshToken != null && _apiClient.refreshTokenStorage != null) {
+      await _apiClient.refreshTokenStorage!.saveRefreshToken(tokenResponse.refreshToken!);
+    }
+    return tokenResponse;
+  }
+
+  /// Authenticate using Google credential (ID Token) and persist returned NextAction JWT.
+  /// Returns null if user cancelled the sign-in flow.
+  Future<TokenResponse?> signInWithGoogle({GoogleSignIn? customGoogleSignIn}) async {
+    final googleSignIn = customGoogleSignIn ?? _defaultGoogleSignIn ?? _createGoogleSignIn();
+
+    final GoogleSignInAccount? account = await googleSignIn.signIn();
+    if (account == null) {
+      // User explicitly cancelled the sign-in flow
+      return null;
+    }
+
+    final GoogleSignInAuthentication auth = await account.authentication;
+    final String? idToken = auth.idToken;
+    if (idToken == null || idToken.isEmpty) {
+      throw const ApiException(
+        statusCode: 400,
+        errorCode: 'INVALID_CREDENTIALS',
+        message: 'Google Sign-In failed to retrieve ID token. Verify OAuth client ID configuration.',
+      );
+    }
+
+    final payload = GoogleLoginRequest(idToken: idToken);
+    final response = await _apiClient.post(
+      '/auth/google',
       body: payload.toJson(),
       requiresAuth: false,
     );
@@ -84,7 +135,7 @@ class AuthService {
   }
 
   /// Logout by revoking refresh token on server and clearing all local tokens.
-  Future<void> logout() async {
+  Future<void> logout({GoogleSignIn? customGoogleSignIn}) async {
     final refreshToken = await _apiClient.refreshTokenStorage?.getRefreshToken();
     try {
       if (refreshToken != null && refreshToken.isNotEmpty) {
@@ -97,6 +148,14 @@ class AuthService {
     } catch (_) {
       // Best-effort remote revocation on logout
     } finally {
+      try {
+        final googleSignIn = customGoogleSignIn ?? _defaultGoogleSignIn ?? _createGoogleSignIn();
+        if (await googleSignIn.isSignedIn()) {
+          await googleSignIn.signOut();
+        }
+      } catch (_) {
+        // Best-effort Google sign-out
+      }
       await _apiClient.tokenStorage.deleteToken();
       await _apiClient.refreshTokenStorage?.clearAllTokens();
     }

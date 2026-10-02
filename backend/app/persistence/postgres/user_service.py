@@ -141,6 +141,41 @@ class PostgresUserService:
             if close_needed:
                 session.close()
 
+    def authenticate_or_create_google_user(
+        self,
+        db: Optional[Session] = None,
+        google_id: str = "",
+        email: str = "",
+        name: str = "",
+    ) -> User:
+        """Authenticate existing Google user, link existing email account, or create new user."""
+        session, close_needed = self._ensure_session(db)
+        try:
+            norm_email = normalize_email(email)
+
+            # Lookup by email (safe account linking policy)
+            user = self.get_user_by_email(session, norm_email)
+            if user:
+                if not user.is_active:
+                    raise InactiveUserError(f"User account '{user.email}' is inactive.")
+                return user
+
+            # Create new user with verified Google identity
+            display_name = name.strip() if name and name.strip() else norm_email.split("@")[0]
+            new_user = User(
+                name=display_name,
+                email=norm_email,
+                password_hash="",
+                is_active=True,
+            )
+            session.add(new_user)
+            session.commit()
+            session.refresh(new_user)
+            return new_user
+        finally:
+            if close_needed:
+                session.close()
+
     def list_users(
         self,
         db: Optional[Session] = None,

@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../core/errors/api_exception.dart';
 import '../models/auth/auth_models.dart';
 import '../services/auth/auth_service.dart';
@@ -52,20 +53,19 @@ class AuthProvider extends ChangeNotifier {
       _errorMessage = null;
     } on ApiException catch (e) {
       debugPrint('[AuthProvider] Startup auth check failed: ${e.message} (${e.statusCode})');
-      // Token is invalid, expired, or rejected by backend
-      await _authService.logout();
+      if (e.statusCode == 401) {
+        // Token is invalid, expired, or rejected by backend
+        await _authService.logout();
+      }
       _currentUser = null;
       _status = AuthStatus.unauthenticated;
-      if (e.statusCode != 401) {
-        // Network or server error on startup
-        _errorMessage = e.message;
-      }
+      // Do not set _errorMessage on startup failure; keep Login/Register screen clean
+      _errorMessage = null;
     } catch (e) {
       debugPrint('[AuthProvider] Startup auth check unexpected error: $e');
-      await _authService.logout();
       _currentUser = null;
       _status = AuthStatus.unauthenticated;
-      _errorMessage = 'Unable to verify authentication session.';
+      _errorMessage = null;
     } finally {
       notifyListeners();
     }
@@ -96,6 +96,51 @@ class AuthProvider extends ChangeNotifier {
       _isLoading = false;
       _status = AuthStatus.unauthenticated;
       _errorMessage = 'Login failed: ${e.toString()}';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// Authenticate using Google credential (ID token).
+  /// Verifies token server-side and establishes standard NextAction authenticated session.
+  Future<bool> signInWithGoogle({GoogleSignIn? customGoogleSignIn}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final tokenResponse = await _authService.signInWithGoogle(
+        customGoogleSignIn: customGoogleSignIn,
+      );
+
+      // User cancelled sign-in flow (or dismissed dialog)
+      if (tokenResponse == null) {
+        _isLoading = false;
+        _errorMessage = null;
+        if (_status != AuthStatus.authenticated) {
+          _status = AuthStatus.unauthenticated;
+        }
+        notifyListeners();
+        return false;
+      }
+
+      final user = await _authService.getCurrentUser();
+      _currentUser = user;
+      _status = AuthStatus.authenticated;
+      _errorMessage = null;
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _isLoading = false;
+      _status = AuthStatus.unauthenticated;
+      _errorMessage = e.message;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      _isLoading = false;
+      _status = AuthStatus.unauthenticated;
+      _errorMessage = 'Google sign-in failed: ${e.toString()}';
       notifyListeners();
       return false;
     }

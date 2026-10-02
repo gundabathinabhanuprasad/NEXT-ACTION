@@ -146,15 +146,15 @@ class UserAlreadyExistsError(NextActionDomainError):
 class InvalidCredentialsError(NextActionDomainError):
     """Raised on invalid email or password without revealing which was incorrect."""
 
-    def __init__(self) -> None:
-        super().__init__("Invalid email or password.")
+    def __init__(self, message: str = "Invalid email or password.") -> None:
+        super().__init__(message)
 
 
 class InactiveUserError(NextActionDomainError):
     """Raised when an inactive user attempts authentication or access."""
 
-    def __init__(self) -> None:
-        super().__init__("User account is inactive.")
+    def __init__(self, message: str = "User account is inactive.") -> None:
+        super().__init__(message)
 
 
 class AuthenticationRequiredError(NextActionDomainError):

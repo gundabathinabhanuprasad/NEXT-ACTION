@@ -18,6 +18,7 @@ from app.core.security import (
     hash_refresh_token,
     verify_password,
 )
+from app.core.google_auth import verify_google_id_token
 from app.models.refresh_token import RefreshToken
 from app.models.user import User
 from app.persistence.gateway import get_persistence_gateway
@@ -167,6 +168,38 @@ def authenticate_user(
 
     if not user.is_active:
         raise InactiveUserError()
+
+    token, expires_in = create_access_token(subject=str(user.id))
+    _, raw_refresh_token = create_refresh_token_for_user(
+        db=db,
+        user=user,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+    return user, token, expires_in, raw_refresh_token
+
+
+def authenticate_google_user(
+    db: Optional[Session] = None,
+    id_token: str = "",
+    ip_address: Optional[str] = None,
+    user_agent: Optional[str] = None,
+) -> Tuple[Any, str, int, str]:
+    """Authenticate or register user via verified Google ID token and return NextAction JWT pair."""
+    identity = verify_google_id_token(id_token)
+    gateway = get_persistence_gateway()
+    user = gateway.user_service.authenticate_or_create_google_user(
+        db=db,
+        google_id=identity.google_id,
+        email=identity.email,
+        name=identity.name,
+    )
+    if gateway.is_mongodb:
+        access_token, raw_refresh, _ = gateway._get_mongo_user().create_tokens(
+            db=db, user=user, user_agent=user_agent, ip_address=ip_address
+        )
+        expires_in = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        return user, access_token, expires_in, raw_refresh
 
     token, expires_in = create_access_token(subject=str(user.id))
     _, raw_refresh_token = create_refresh_token_for_user(

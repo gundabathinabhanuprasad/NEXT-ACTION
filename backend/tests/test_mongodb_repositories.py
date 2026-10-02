@@ -172,6 +172,22 @@ def test_user_repository_crud(mongo_test_db: Database):
     assert repo.delete(user.id) is True
     assert repo.get_by_id(user.id) is None
 
+    # Google user creation and lookup by google_id
+    u_google = UserDocument(
+        name="Google User",
+        email="google_user@company.com",
+        google_id="gid_1234567890",
+        auth_provider="google",
+    )
+    repo.create(u_google)
+    by_gid = repo.get_by_google_id("gid_1234567890")
+    assert by_gid is not None
+    assert by_gid["email"] == "google_user@company.com"
+    assert by_gid["google_id"] == "gid_1234567890"
+    assert by_gid["auth_provider"] == "google"
+    assert repo.get_by_google_id("nonexistent_gid") is None
+    assert repo.get_by_google_id("") is None
+
 
 def test_user_unique_email_index(mongo_test_db: Database):
     """Verify MongoDB enforces unique email index on users collection."""

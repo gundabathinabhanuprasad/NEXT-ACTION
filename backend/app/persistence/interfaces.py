@@ -180,6 +180,14 @@ class UserPersistenceService(Protocol):
         password: str = "",
     ) -> Any: ...
 
+    def authenticate_or_create_google_user(
+        self,
+        db: Optional[Any] = None,
+        google_id: str = "",
+        email: str = "",
+        name: str = "",
+    ) -> Any: ...
+
     def list_users(
         self,
         db: Optional[Any] = None,

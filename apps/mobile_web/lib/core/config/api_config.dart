@@ -61,4 +61,10 @@ class ApiConfig {
   /// Standard request timeout duration.
   static const Duration connectTimeout = Duration(seconds: 10);
   static const Duration receiveTimeout = Duration(seconds: 15);
+
+  /// Google Web OAuth Client ID configured at compile-time via --dart-define=GOOGLE_WEB_CLIENT_ID=...
+  static const String googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
+
+  /// Google Server / Audience Client ID configured at compile-time via --dart-define=GOOGLE_SERVER_CLIENT_ID=...
+  static const String googleServerClientId = String.fromEnvironment('GOOGLE_SERVER_CLIENT_ID');
 }

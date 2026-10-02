@@ -23,6 +23,8 @@ class UserResponse(BaseModel):
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    google_id: Optional[str] = None
+    auth_provider: Optional[str] = "local"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -42,6 +44,12 @@ class LoginRequest(BaseModel):
 
     email: str = Field(min_length=1, description="Registered email address")
     password: str = Field(min_length=1, description="Account password")
+
+
+class GoogleLoginRequest(BaseModel):
+    """Schema for Google OAuth credential authentication."""
+
+    id_token: str = Field(min_length=1, description="Google OAuth2 ID token returned by Google Sign-In")
 
 
 class TokenResponse(BaseModel):

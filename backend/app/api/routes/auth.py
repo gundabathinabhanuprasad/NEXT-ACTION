@@ -3,6 +3,7 @@ from app.api.dependencies import CurrentUserDep, DatabaseDep
 from app.core.rate_limit import check_auth_rate_limit
 from app.schemas.auth import (
     ChangePasswordRequest,
+    GoogleLoginRequest,
     LoginRequest,
     LogoutRequest,
     RefreshTokenRequest,
@@ -11,6 +12,7 @@ from app.schemas.auth import (
     UserResponse,
 )
 from app.services.auth_service import (
+    authenticate_google_user,
     authenticate_user,
     change_password,
     register_user,
@@ -61,6 +63,35 @@ def login_endpoint(
         db=db,
         email=payload.email,
         password=payload.password,
+        ip_address=ip_address,
+        user_agent=user_agent,
+    )
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in=expires_in,
+        refresh_token=refresh_token,
+    )
+
+
+@router.post(
+    "/google",
+    response_model=TokenResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Google OAuth2 authentication and JWT token issuance",
+    dependencies=[Depends(check_auth_rate_limit)],
+)
+def google_auth_endpoint(
+    request: Request,
+    db: DatabaseDep,
+    payload: GoogleLoginRequest,
+) -> TokenResponse:
+    """Authenticate via verified Google credential and return NextAction session tokens."""
+    ip_address = request.client.host if request.client else None
+    user_agent = request.headers.get("user-agent")
+    user, token, expires_in, refresh_token = authenticate_google_user(
+        db=db,
+        id_token=payload.id_token,
         ip_address=ip_address,
         user_agent=user_agent,
     )

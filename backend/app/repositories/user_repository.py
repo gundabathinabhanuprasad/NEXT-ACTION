@@ -32,6 +32,12 @@ class UserRepository(BaseMongoRepository):
         norm_email = email.strip().lower()
         return self.find_one({"email": norm_email})
 
+    def get_by_google_id(self, google_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieve user by verified Google subject ID."""
+        if not google_id or not str(google_id).strip():
+            return None
+        return self.find_one({"google_id": str(google_id).strip()})
+
     def email_exists(self, email: str) -> bool:
         """Check if an account exists with the given email."""
         norm_email = email.strip().lower()
