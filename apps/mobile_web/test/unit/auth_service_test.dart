@@ -63,7 +63,10 @@ class FakeGoogleSignInAccount implements GoogleSignInAccount {
 
   @override
   Future<GoogleSignInAuthentication> get authentication async =>
-      FakeGoogleSignInAuthentication(idToken: _mockIdToken);
+      FakeGoogleSignInAuthentication(
+        idToken: _mockIdToken,
+        accessToken: _mockIdToken != null ? 'mock_google_access_token' : null,
+      );
 
   @override
   Future<Map<String, String>> get authHeaders async => {};

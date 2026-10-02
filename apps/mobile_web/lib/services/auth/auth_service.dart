@@ -20,10 +20,17 @@ class AuthService {
   RefreshTokenStorage? get refreshTokenStorage => _apiClient.refreshTokenStorage;
 
   GoogleSignIn _createGoogleSignIn() {
+    final webId = ApiConfig.googleWebClientId.isNotEmpty
+        ? ApiConfig.googleWebClientId
+        : '961913451597-ft3u2q5vo79m5tv6i58ia69o89p5nm34.apps.googleusercontent.com';
+    final serverId = ApiConfig.googleServerClientId.isNotEmpty
+        ? ApiConfig.googleServerClientId
+        : webId;
+
     return GoogleSignIn(
-      clientId: kIsWeb && ApiConfig.googleWebClientId.isNotEmpty ? ApiConfig.googleWebClientId : null,
-      serverClientId: ApiConfig.googleServerClientId.isNotEmpty ? ApiConfig.googleServerClientId : null,
-      scopes: const ['email', 'profile'],
+      clientId: kIsWeb ? webId : null,
+      serverClientId: serverId,
+      scopes: const ['email', 'openid', 'profile'],
     );
   }
 
@@ -48,7 +55,7 @@ class AuthService {
     return tokenResponse;
   }
 
-  /// Authenticate using Google credential (ID Token) and persist returned NextAction JWT.
+  /// Authenticate using Google credential (ID Token or Access Token) and persist returned NextAction JWT.
   /// Returns null if user cancelled the sign-in flow.
   Future<TokenResponse?> signInWithGoogle({GoogleSignIn? customGoogleSignIn}) async {
     final googleSignIn = customGoogleSignIn ?? _defaultGoogleSignIn ?? _createGoogleSignIn();
@@ -60,8 +67,10 @@ class AuthService {
     }
 
     final GoogleSignInAuthentication auth = await account.authentication;
-    final String? idToken = auth.idToken;
-    if (idToken == null || idToken.isEmpty) {
+    final String? token = (auth.idToken != null && auth.idToken!.isNotEmpty)
+        ? auth.idToken
+        : auth.accessToken;
+    if (token == null || token.isEmpty) {
       throw const ApiException(
         statusCode: 400,
         errorCode: 'INVALID_CREDENTIALS',
@@ -69,7 +78,7 @@ class AuthService {
       );
     }
 
-    final payload = GoogleLoginRequest(idToken: idToken);
+    final payload = GoogleLoginRequest(idToken: token);
     final response = await _apiClient.post(
       '/auth/google',
       body: payload.toJson(),
