@@ -58,9 +58,9 @@ class ApiConfig {
   /// Full API v1 prefix URL.
   static String get v1BaseUrl => '$baseUrl/api/v1';
 
-  /// Standard request timeout duration.
-  static const Duration connectTimeout = Duration(seconds: 10);
-  static const Duration receiveTimeout = Duration(seconds: 15);
+  /// Standard request timeout duration (extended for serverless / cold-start tolerance).
+  static const Duration connectTimeout = Duration(seconds: 30);
+  static const Duration receiveTimeout = Duration(seconds: 60);
 
   /// Google Web OAuth Client ID configured at compile-time via --dart-define=GOOGLE_WEB_CLIENT_ID=...
   static const String googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
